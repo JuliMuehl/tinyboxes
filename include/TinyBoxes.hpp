@@ -101,6 +101,8 @@ struct DistanceJoint{
     }
 };
 
+using BodyId = uint64_t;
+
 struct World{
     private:
     static constexpr int RELAXATION_ITERATIONS = 10;
@@ -111,11 +113,11 @@ struct World{
     CollisionConstraint collision_c;
     public:
     World(Vector3f g = Vector3f(0,-9.81,0)):g(g){}
-    inline uint64_t AddBody(RigidBody body){
+    inline BodyId AddBody(RigidBody body){
         bodies.push_back(body);
         return bodies.size() - 1;
     }
-    inline Matrix4f BodyTransform(uint64_t bodyId){
+    inline Matrix4f BodyTransform(BodyId bodyId){
         const RigidBody& body = bodies[bodyId];
         return Matrix4f(Matrix3f(body.θ),body.x);
     }
