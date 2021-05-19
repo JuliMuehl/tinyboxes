@@ -1,4 +1,8 @@
 #include "Collision.hpp"
+#include <array>
+#include <cassert>
+#include <tuple>
+#include <set>
 
 static float dp[4][4];
 static float memo[16][4];

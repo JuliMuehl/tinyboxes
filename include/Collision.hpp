@@ -1,14 +1,8 @@
 #ifndef COLLISION_HPP
 #define COLLISION_HPP
 #include <vector>
-#include <numeric>
 #include <limits>
 #include <memory>
-#include <array>
-#include <set>
-#include <map>
-#include <tuple>
-#include <cassert>
 
 
 #include "Math.hpp"
