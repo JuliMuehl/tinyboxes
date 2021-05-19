@@ -148,10 +148,10 @@ int main(int argc,char** argv){
     std::shared_ptr<ConvexCollider> collider = std::make_shared<ConvexPolyhedron>(cv);
     std::shared_ptr<ConvexCollider> collider_sphere = std::make_shared<SphereCollider>(1);
     
-    uint64_t b1 = w.AddBody({Vector3f(0,1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
-    uint64_t b2 = w.AddBody({Vector3f(0,3.1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
-    uint64_t b3 = w.AddBody({Vector3f(0,5.2,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
-    uint64_t b4 = w.AddBody({Vector3f(0,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
+    uint64_t b11 = w.AddBody({Vector3f(0,1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
+    uint64_t b12 = w.AddBody({Vector3f(0,3.1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
+    uint64_t b13 = w.AddBody({Vector3f(0,5.2,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
+    uint64_t b14 = w.AddBody({Vector3f(0,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
 
     uint64_t b21 = w.AddBody({Vector3f(-2.1,1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
     uint64_t b22 = w.AddBody({Vector3f(-2.1,3.1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
@@ -163,10 +163,10 @@ int main(int argc,char** argv){
     uint64_t b33 = w.AddBody({Vector3f(-4.1,5.2,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
     uint64_t b34 = w.AddBody({Vector3f(-4.1,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider});
 
-    uint64_t b5 = w.AddBody({Vector3f(3.0,8,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
-    uint64_t b6 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(50,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.5,collider_sphere});
+    uint64_t ball1 = w.AddBody({Vector3f(3.0,8,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
+    uint64_t ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(50,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.5,collider_sphere});
 
-    w.AddJoint(DistanceJoint(b5,b6,3.0));
+    w.AddJoint(DistanceJoint(ball1,ball2,3.0));
     
     glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
@@ -195,7 +195,7 @@ int main(int argc,char** argv){
 
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b1);
+                Matrix4f mat = w.BodyTransform(b11);
                 glMultMatrixf(&mat.a[0][0]);
                 drawCube(1);
             }
@@ -203,7 +203,7 @@ int main(int argc,char** argv){
 
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b2);
+                Matrix4f mat = w.BodyTransform(b12);
                 glMultMatrixf(&mat.a[0][0]);
                 drawCube(1);
             }
@@ -211,7 +211,7 @@ int main(int argc,char** argv){
 
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b3);
+                Matrix4f mat = w.BodyTransform(b13);
                 glMultMatrixf(&mat.a[0][0]);
                 drawCube(1);
             }
@@ -219,7 +219,7 @@ int main(int argc,char** argv){
 
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b4);
+                Matrix4f mat = w.BodyTransform(b14);
                 glMultMatrixf(&mat.a[0][0]);
                 drawCube(1);
             }
@@ -293,7 +293,7 @@ int main(int argc,char** argv){
 
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b5);
+                Matrix4f mat = w.BodyTransform(ball1);
                 glMultMatrixf(&mat.a[0][0]);
                 drawSphere(1);
             }
@@ -301,7 +301,7 @@ int main(int argc,char** argv){
 
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b6);
+                Matrix4f mat = w.BodyTransform(ball2);
                 glMultMatrixf(&mat.a[0][0]);
                 drawSphere(1);
             }
