@@ -2,7 +2,9 @@
 #include <array>
 #include <cassert>
 #include <tuple>
+#include <unordered_set>
 #include <set>
+
 
 static float dp[4][4];
 static float memo[16][4];
@@ -132,20 +134,38 @@ bool gjk(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const Conve
     return true;
 }
 
+using Edge = std::pair<size_t, size_t>;
+struct Face : public std::tuple<size_t, size_t, size_t> {
+    Vector3f normal;
+    Face() {}
+    Face(size_t i, size_t j, size_t k, Vector3f normal) : std::tuple<size_t, size_t, size_t>(i, j, k), normal(normal) {}
+    inline std::array<Edge, 3> edges() const {
+        size_t i = std::get<0>(*this), j = std::get<1>(*this), k = std::get<2>(*this);
+        return { std::make_pair(i,j) ,std::make_pair(j,k),std::make_pair(k,i) };
+    }
+};
+
+template<> struct std::hash<Face>{
+    size_t operator() (const Face& face) const noexcept{
+        size_t h0 = std::hash<size_t>{}(std::get<0>(face));
+        size_t h1 = std::hash<size_t>{}(std::get<1>(face));
+        size_t h2 = std::hash<size_t>{}(std::get<2>(face));
+        return h0 ^ (h1 << 1) ^ (h2 << 2);
+    }
+};
+
+template<> struct std::hash<Edge>{
+    size_t operator() (const Edge& edge) const noexcept{
+        size_t h0 = std::hash<size_t>{}(edge.first);
+        size_t h1 = std::hash<size_t>{}(edge.second);
+        return h0 ^ (h1 << 1);
+    }
+};
+
 struct ExpandingPolytope {
-    using Edge = std::pair<size_t, size_t>;
-    struct Face : public std::tuple<size_t, size_t, size_t> {
-        Vector3f normal;
-        Face() {}
-        Face(size_t i, size_t j, size_t k, Vector3f normal) : std::tuple<size_t, size_t, size_t>(i, j, k), normal(normal) {}
-        inline std::array<Edge, 3> edges() const {
-            size_t i = std::get<0>(*this), j = std::get<1>(*this), k = std::get<2>(*this);
-            return { std::make_pair(i,j) ,std::make_pair(j,k),std::make_pair(k,i) };
-        }
-    };
 private:
     std::vector<SupportPoint> vertices;
-    std::set<Face> faces;
+    std::unordered_set<Face> faces;
 
     inline Vector3f Normal(size_t i, size_t j, size_t k) noexcept{
         Vector3f n = Cross((vertices[j].x - vertices[i].x),(vertices[k].x - vertices[i].x));
@@ -168,7 +188,7 @@ private:
 public:
     void InsertVertex(SupportPoint point) noexcept{
         vertices.push_back(point);
-        std::set<Edge> horizon;
+        std::unordered_set<Edge> horizon;
         for (auto it = faces.begin(); it != faces.end();) {
             const Face& face = *it;
             if (Dot(face.normal,point.x - vertices[std::get<0>(face)].x) >= 0) {
@@ -235,7 +255,7 @@ Contact EPA(const std::vector<SupportPoint>& simplex,const ConvexCollider& c1,co
     constexpr unsigned int MAX_ITERATIONS = 100;
     constexpr float TOLERANCE = 1e-6;
     auto polytope = ExpandingPolytope(simplex);
-    ExpandingPolytope::Face face;
+    Face face;
     unsigned int i = 0;
     float distance = 0;
     float d = 0;
