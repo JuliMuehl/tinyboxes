@@ -25,7 +25,7 @@ int main(){
         //Get the position and orientation of the bodies as 4x4 Matrices
         Matrix4f mat1 = w.BodyTransform(body1);
         Matrix4f mat2 = w.BodyTransform(body2);
-        //Draw the matrices (this part is up to you)
+        //Use your draw code with the position and orientation (this part is up to you)
         yourDrawCode(mat1);
         yourDrawCode(mat2);
     }
