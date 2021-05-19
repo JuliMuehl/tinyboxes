@@ -34,6 +34,8 @@ int main(){
 
 ``` 
 
+Have a look at the demos/ directory for additional examples of how the engine can be used.
+
 ## Build Instructions
 In order to build the demos use the following command (requires g++, glfw and OpenGl to be installed on your system)
 
