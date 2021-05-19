@@ -2,8 +2,6 @@
 #define COLLISION_HPP
 #include <vector>
 #include <numeric>
-#include <algorithm>
-#include <iostream>
 #include <limits>
 #include <memory>
 #include <array>
@@ -11,8 +9,6 @@
 #include <map>
 #include <tuple>
 #include <cassert>
-#include <thread>
-#include <chrono>
 
 
 #include "Math.hpp"
