@@ -18,13 +18,13 @@ int main(){
     World w = World(); // Creates World
     std::shared_ptr<ConvexCollider> collider_sphere = std::make_shared<SphereCollider>(1); // create a Collider for the body
 
-    //Creates a body and adds it to the world
+    //Create a body and add it to the world
     uint64_t body1 = w.AddBody({Vector3f(0,1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
-    //Creates a second body and adds it to the world
+    //Create a second body and add it to the world
     uint64_t body2 = w.AddBody({Vector3f(0,4,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
-    //Creates a third body and adds it to the world
+    //Creates a third body and add it to the world
     uint64_t body2 = w.AddBody({Vector3f(0,10,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
-    //Creates a joint and adds it to the world
+    //Create a joint and add it to the world
     w.AddJoint(DistanceJoint(body1,body2,3.0)); 
     while(true){
         w.step(.01f); // Make an integration step of size .01
