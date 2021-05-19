@@ -29,7 +29,8 @@ int main(){
     //Create a joint and add it to the world
     w.AddJoint(DistanceJoint(body1,body2,3.0)); 
     while(true){
-        w.step(.01f); // Make an integration step of size .01
+        // Make an integration step of size .01
+        w.step(.01f); 
         //Get the position and orientation of the bodies as 4x4 Matrices
         Matrix4f mat1 = w.BodyTransform(body1);
         Matrix4f mat2 = w.BodyTransform(body2);
