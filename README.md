@@ -25,7 +25,7 @@ int main(){
         //Get the position and orientation of the bodies as 4x4 Matrices
         Matrix4f mat1 = w.BodyTransform(body1);
         Matrix4f mat2 = w.BodyTransform(body2);
-        //Use your draw code with the position and orientation (this part is up to you)
+        //Use your draw code with the positions and orientations of the bodies (this part is up to you)
         yourDrawCode(mat1);
         yourDrawCode(mat2);
     }
@@ -34,10 +34,10 @@ int main(){
 ``` 
 
 ## Build Instructions
-In order to build the demos use the following command (requires g++, glfw, OpenGl to be installed on your system)
+In order to build the demos use the following command (requires g++, glfw and OpenGl to be installed on your system)
 
 ```bash 
-g++ -lGL -lglfw -lm -I include src/*.cpp demos/<insert_demo_name>.cpp -o <insert_demo_name_binary>
+g++ -lGL -lglfw -lm -I include src/*.cpp demos/<insert_demo_name>.cpp -o <insert_demo_name>
 ``` 
 
 
