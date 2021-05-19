@@ -25,7 +25,7 @@ int main(){
     //Create a second body and add it to the world
     uint64_t body2 = w.AddBody({Vector3f(0,4,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
     //Creates a third body and add it to the world
-    uint64_t body2 = w.AddBody({Vector3f(0,10,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
+    uint64_t body3 = w.AddBody({Vector3f(0,10,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
     //Create a joint and add it to the world
     w.AddJoint(DistanceJoint(body1,body2,3.0)); 
     while(true){
@@ -33,9 +33,11 @@ int main(){
         //Get the position and orientation of the bodies as 4x4 Matrices
         Matrix4f mat1 = w.BodyTransform(body1);
         Matrix4f mat2 = w.BodyTransform(body2);
+        Matrix4f mat3 = w.BodyTransform(body3);
         //Use your draw code with the positions and orientations of the bodies (this part is up to you)
         yourDrawCode(mat1);
         yourDrawCode(mat2);
+        yourDrawCode(mat3);
     }
 }
 
