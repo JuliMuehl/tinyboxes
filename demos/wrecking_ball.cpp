@@ -1,7 +1,7 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
-#include "tinyboxes.hpp"
+#include "TinyBoxes.hpp"
 
 static void drawFace(){
     glBegin(GL_TRIANGLES);
