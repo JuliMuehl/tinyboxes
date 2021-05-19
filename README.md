@@ -36,9 +36,9 @@ int main(){
         Matrix4f mat2 = w.BodyTransform(body2);
         Matrix4f mat3 = w.BodyTransform(body3);
         //Use your draw code with the positions and orientations of the bodies (this part is up to you)
-        yourDrawCode(mat1);
-        yourDrawCode(mat2);
-        yourDrawCode(mat3);
+        YourDrawCode(mat1);
+        YourDrawCode(mat2);
+        YourDrawCode(mat3);
     }
 }
 
