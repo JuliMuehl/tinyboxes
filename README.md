@@ -21,9 +21,9 @@ int main(){
     std::shared_ptr<ConvexCollider> collider_sphere = std::make_shared<SphereCollider>(1); 
 
     //Create a body and add it to the world
-    uint64_t body1 = w.AddBody({Vector3f(0,1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
+    uint64_t body1 = w.AddBody({Vector3f(0,4,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
     //Create a second body and add it to the world
-    uint64_t body2 = w.AddBody({Vector3f(0,4,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
+    uint64_t body2 = w.AddBody({Vector3f(0,7,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
     //Creates a third body and add it to the world
     uint64_t body3 = w.AddBody({Vector3f(0,10,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
     //Create a joint and add it to the world
