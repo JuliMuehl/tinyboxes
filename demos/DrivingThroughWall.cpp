@@ -166,7 +166,7 @@ int main(int argc,char** argv){
     BodyId ball1 = w.AddBody({Vector3f(-2.0,1,-32),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(100,0,0), Matrix3f::Identity(),1.0,collider_sphere});
     BodyId ball2 = w.AddBody({Vector3f(-2.0,1,-35),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(100,0,0), Matrix3f::Identity(),1.0,collider_sphere});
 
-    w.AddJoint(DistanceJoint(b5,b6,3.0));
+    w.AddJoint(DistanceJoint(ball1,ball2,3.0));
     
     glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
