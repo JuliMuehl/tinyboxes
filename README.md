@@ -1,5 +1,5 @@
 ## TinyBoxes 
-A small rigid body dynamics engine written in c++.
+A small 3D rigid body dynamics engine written in c++.
 The engine currently features collision detection between convex shapes using the GJK and EPA algorithms as well as collision resolution using  Projected Gauss Seidel Iteration (a.k.a. Sequential Impulses). The engine also implements a simple distance constraint and additional joints (hinge, ball and socket joint) will be added in the future.
 
 TinyBoxes has no external dependencies despite OpenGL and GLFW which are only required for the demos.
