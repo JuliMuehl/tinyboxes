@@ -24,8 +24,6 @@ struct RigidBody{
     }
 };
 
-
-
 struct PlaneConstraint{
     private:
     static constexpr float BETA = .1;
@@ -120,6 +118,18 @@ struct World{
     inline Matrix4f BodyTransform(BodyId bodyId){
         const RigidBody& body = bodies[bodyId];
         return Matrix4f(Matrix3f(body.θ),body.x);
+    }
+    inline Vector3f GetPosition(BodyId bodyId){
+        return bodies[bodyId].x;
+    }
+    inline Quaternionf GetOrientation(BodyId bodyId){
+        return bodies[bodyId].θ;
+    }
+    inline Vector3f GetVelocity(BodyId bodyId){
+        return bodies[bodyId].v;
+    }
+    inline Vector3f GetAngularVelocity(BodyId bodyId){
+        return bodies[bodyId].ω;
     }
     inline void AddJoint(DistanceJoint joint){
         distanceJoints.push_back(joint);
