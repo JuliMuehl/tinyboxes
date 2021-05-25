@@ -172,7 +172,7 @@ void World::step(float dt){
     }
     plane_c.FindViolations(bodies);
     collision_c.FindViolations(bodies);
-    for(int i = 0;i<RELAXATION_ITERATIONS;i++){
+    for(int i = 0;i<GAUSS_SEIDEL_ITERATIONS;i++){
         plane_c.ApplyImpulses(bodies,dt);
         collision_c.ApplyImpulses(bodies,dt);
         for(auto& joint:distanceJoints){

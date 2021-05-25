@@ -103,7 +103,7 @@ using BodyId = uint64_t;
 
 struct World{
     private:
-    static constexpr int RELAXATION_ITERATIONS = 10;
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 10;
     std::vector<RigidBody> bodies;
     std::vector<DistanceJoint> distanceJoints;
     Vector3f g;
