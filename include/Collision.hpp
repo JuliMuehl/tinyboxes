@@ -51,7 +51,7 @@ struct ConvexPolyhedron:public ConvexCollider{
     std::vector<Vector3f> vertices;
     float radius;
     ConvexPolyhedron(std::vector<Vector3f> vertices):vertices(vertices){
-        radius = vertices[0].Norm();
+        radius = 0;
         for(auto& vertex:vertices){
             radius = std::max(radius,vertex.Norm());
         }

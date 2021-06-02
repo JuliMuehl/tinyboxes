@@ -1,4 +1,6 @@
 #include "TinyBoxes.hpp"
+#include <cstdio>
+#include <iostream>
 
 template<typename T>
 static T Clamp(const T& x,const T& lower,const T& upper){
@@ -111,6 +113,7 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                     }
                     const RigidBody& b1 = bodies[i];
                     const RigidBody& b2 = bodies[j];
+                    
                     contacts.erase(std::remove_if(contacts.begin(),contacts.end(),[&contact,b1,b2](auto c){return c.age>=CONTACT_EXPIRATION || fabs(contact.depth - c.depth) >= CONTACT_DEPTH_TOLLERANCE ;}),contacts.end());
                     for(Contact& c:contacts){
                         c.age++;
@@ -180,4 +183,3 @@ void World::step(float dt){
         }
     }
 }
-

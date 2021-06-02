@@ -26,8 +26,8 @@ struct RigidBody{
 
 struct PlaneConstraint{
     private:
-    static constexpr float BETA = .1;
-    static constexpr float MU = .7;
+    static constexpr float BETA = .2;
+    static constexpr float MU = .5;
     static constexpr float TOLLERANCE = 1e-5;
     Vector3f normal,u1,u2;
     float d;
@@ -53,15 +53,15 @@ struct PlaneConstraint{
 
 struct CollisionConstraint{
     private:
-    static constexpr float BETA = .3;
-    static constexpr float MU = 0.7;
+    static constexpr float BETA = .2;
+    static constexpr float MU = 0.5;
     static constexpr float TOLLERANCE = 1e-4;
     std::map<std::pair<size_t,size_t>,std::vector<Contact>> violations;
     std::map<std::pair<size_t,size_t>,int> last_contact;
-    static constexpr float RESTING_VELOCITY = 1.0f;
-    static constexpr float CONTACT_TOLLERANCE = .1;
-    static constexpr float CONTACT_DEPTH_TOLLERANCE = .1;
-    static constexpr unsigned int CONTACT_EXPIRATION = 3;
+    static constexpr float RESTING_VELOCITY = 0.1f;
+    static constexpr float CONTACT_TOLLERANCE = .01;
+    static constexpr float CONTACT_DEPTH_TOLLERANCE = .01;
+    static constexpr unsigned int CONTACT_EXPIRATION = 4;
     public:
     void FindViolations(const std::vector<RigidBody>& bodies);
     inline void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
@@ -103,7 +103,7 @@ using BodyId = uint64_t;
 
 struct World{
     private:
-    static constexpr int GAUSS_SEIDEL_ITERATIONS = 10;
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 100;
     std::vector<RigidBody> bodies;
     std::vector<DistanceJoint> distanceJoints;
     Vector3f g;
