@@ -1,5 +1,7 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
+#include <thread>
+#include <chrono>
 
 #include "TinyBoxes.hpp"
 
@@ -127,10 +129,8 @@ static void drawCube(float scale=1){
     glPopMatrix();
 }
 
-#include <thread>
-#include <chrono>
 
-int main(int argc,char** argv){
+int main(){
     glfwInit();
     GLFWwindow* window = glfwCreateWindow(800,800,"Boxes",NULL,NULL);
     glfwMakeContextCurrent(window);
@@ -144,37 +144,20 @@ int main(int argc,char** argv){
     World w = World();
 
     std::vector<Vector3f> cv = {{-1,-1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,-1},{-1,1,-1},{1,1,-1},{1,-1,-1}};
-
     std::shared_ptr<ConvexCollider> collider = std::make_shared<ConvexPolyhedron>(cv);
     std::shared_ptr<ConvexCollider> collider_sphere = std::make_shared<SphereCollider>(1);
-
     constexpr float BOX_INVERSE_MASS = 1.0; 
-    
-    BodyId b11 = w.AddBody({Vector3f(0,1.0,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b12 = w.AddBody({Vector3f(0,3.1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b13 = w.AddBody({Vector3f(0,5.2,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b14 = w.AddBody({Vector3f(0,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
 
-    BodyId b21 = w.AddBody({Vector3f(-2.1,1.0,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b22 = w.AddBody({Vector3f(-2.1,3.1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b23 = w.AddBody({Vector3f(-2.1,5.2,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b24 = w.AddBody({Vector3f(-2.1,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
+    BodyId b1 = w.AddBody({Vector3f(0,10.0,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(500,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
+    BodyId b2 = w.AddBody({Vector3f(0.0,0.0,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0),1*Matrix3f::Identity(),0,collider});
 
-    BodyId b31 = w.AddBody({Vector3f(-4.1,1.0,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b32 = w.AddBody({Vector3f(-4.1,3.1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b33 = w.AddBody({Vector3f(-4.1,5.2,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
-    BodyId b34 = w.AddBody({Vector3f(-4.1,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
+    w.AddJoint(BallAndSocketJoint(b1,Vector3f(0,-5,0),b2,Vector3f(0,5,0)));
 
-    BodyId ball1 = w.AddBody({Vector3f(3.0,8,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
-    BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(70,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider});
-
-    w.AddJoint(DistanceJoint(ball1,ball2,3));
-    
     glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
     while(!glfwWindowShouldClose(window)){
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        w.step(.01f);
+        w.step(.005f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glColor3f(1,1,1);
         glPushMatrix();
@@ -197,118 +180,18 @@ int main(int argc,char** argv){
 
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b11);
+                Matrix4f mat = w.BodyTransform(b1);
                 glMultMatrixf(&mat.a[0][0]);
                 drawCube(1);
             }
             glPopMatrix();
-
             glPushMatrix();
             {
-                Matrix4f mat = w.BodyTransform(b12);
+                Matrix4f mat = w.BodyTransform(b2);
                 glMultMatrixf(&mat.a[0][0]);
                 drawCube(1);
             }
             glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b13);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b14);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b21);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b22);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b23);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b24);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b31);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b32);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b33);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b34);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(ball1);
-                glMultMatrixf(&mat.a[0][0]);
-                drawSphere(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(ball2);
-                glMultMatrixf(&mat.a[0][0]);
-                drawSphere(1);
-            }
-            glPopMatrix();
-
 
         glPopMatrix();
         glfwSwapBuffers(window);
