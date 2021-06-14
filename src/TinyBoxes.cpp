@@ -106,7 +106,7 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                     
                     for(Contact& c:contacts){
                         float dot = Dot(c.normal,contact.normal);
-                        if((1 - dot * dot) <= CONTACT_NORMAL_TOLLERANCE && (c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE && fabs(contact.depth - c.depth) >= CONTACT_DEPTH_TOLLERANCE ){
+                        if((1 - dot * dot) <= CONTACT_NORMAL_TOLLERANCE && (c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE && fabs(contact.depth - c.depth) <= CONTACT_DEPTH_TOLLERANCE ){
                             c = contact;
                             replacedContact = true;
                             break;
