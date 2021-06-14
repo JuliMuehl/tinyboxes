@@ -105,16 +105,18 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                     bool replacedContact = false;
                     
                     for(Contact& c:contacts){
-                        if((c.normal,contact.normal).NormSquared() <= CONTACT_TOLLERANCE && (c.point - contact.point).NormSquared() <= CONTACT_TOLLERANCE){
+                        float dot = Dot(c.normal,contact.normal);
+                        if((1 - dot * dot) <= CONTACT_NORMAL_TOLLERANCE && (c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE && fabs(contact.depth - c.depth) >= CONTACT_DEPTH_TOLLERANCE ){
                             c = contact;
                             replacedContact = true;
                             break;
                         }
                     }
+
                     const RigidBody& b1 = bodies[i];
                     const RigidBody& b2 = bodies[j];
                     
-                    contacts.erase(std::remove_if(contacts.begin(),contacts.end(),[&contact,b1,b2](auto c){return c.age>=CONTACT_EXPIRATION || fabs(contact.depth - c.depth) >= CONTACT_DEPTH_TOLLERANCE ;}),contacts.end());
+                    contacts.erase(std::remove_if(contacts.begin(),contacts.end(),[&contact,b1,b2](auto c){return c.age>=CONTACT_EXPIRATION;}),contacts.end());
                     for(Contact& c:contacts){
                         c.age++;
                     }
