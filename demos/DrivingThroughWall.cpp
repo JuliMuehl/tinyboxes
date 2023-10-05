@@ -171,7 +171,7 @@ int main(int argc,char** argv){
     glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 
     while(!glfwWindowShouldClose(window)){
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
         w.step(.01f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glColor3f(1,1,1);

@@ -162,11 +162,37 @@ template<> struct std::hash<Edge>{
     }
 };
 
+template<typename T>
+struct ArraySet{
+public:
+    using iterator_type = typename std::vector<T>::iterator;
+    ArraySet(std::vector<T> data):arr(data){
+    }
+    ArraySet(){}
+    void insert(T elem){
+        arr.push_back(elem);
+    }
+    iterator_type erase(iterator_type it){
+        std::swap(*it,arr.back());
+        arr.pop_back();
+        return it == std::prev(arr.end()) ? arr.end():it;
+    }
+    iterator_type begin(){
+        return arr.begin();
+    }
+    iterator_type end(){
+        return arr.end();
+    }
+private:
+    std::vector<T> arr;
+};
+
 struct ExpandingPolytope {
 private:
     std::vector<SupportPoint> vertices;
-    std::unordered_set<Face> faces;
-
+    //std::unordered_set<Face> faces;
+    using Set = ArraySet<Face>;
+    Set faces;
     inline Vector3f Normal(size_t i, size_t j, size_t k) noexcept{
         Vector3f n = Cross((vertices[j].x - vertices[i].x),(vertices[k].x - vertices[i].x));
         n = (1 / n.Norm()) * n;
@@ -247,7 +273,7 @@ public:
 
     ExpandingPolytope(const std::vector<SupportPoint>& simplex) : vertices(simplex) {
         assert(simplex.size() == 4);
-        faces = { MakeFace(1,2,0) ,MakeFace(3,2,1) ,MakeFace(0,3,1) ,MakeFace(2,3,0) };
+        faces = Set({ MakeFace(1,2,0) ,MakeFace(3,2,1) ,MakeFace(0,3,1) ,MakeFace(2,3,0) });
     }
 };
 

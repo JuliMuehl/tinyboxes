@@ -1,3 +1,5 @@
+#ifndef TINYBOXES_GUARD
+#define TINYBOXES_GUARD
 #include <vector>
 #include <algorithm>
 #include <memory>
@@ -18,6 +20,12 @@ struct RigidBody{
     inline Vector3f GetVelocityAtPoint(Vector3f point) const{
         Vector3f r = x - point;
         return Cross(ω,r) + v;
+    }
+    inline Vector3f PointToLocal(Vector3f p) const {
+        return θ.Conjugate().Rotate(p-x);
+    }
+    inline Vector3f PointToGlobal(Vector3f r) const {
+        return θ.Rotate(r) + x;
     }
     inline Matrix3f GetTransformedInverseInertia() const{
         return Matrix3f(θ) * inverseInertia * Matrix3f(θ.Conjugate());
@@ -56,7 +64,7 @@ struct CollisionConstraint{
     static constexpr float BETA = .2;
     static constexpr float MU = 0.5;
     static constexpr float TOLLERANCE = 1e-4;
-    std::map<std::pair<size_t,size_t>,std::vector<Contact>> violations;
+    std::map<std::pair<size_t,size_t>,std::list<Contact>> violations;
     std::map<std::pair<size_t,size_t>,int> last_contact;
     static constexpr float RESTING_VELOCITY = 0.1f;
     static constexpr float CONTACT_TOLLERANCE = .01;
@@ -103,7 +111,7 @@ using BodyId = uint64_t;
 
 struct World{
     private:
-    static constexpr int GAUSS_SEIDEL_ITERATIONS = 100;
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 10;
     std::vector<RigidBody> bodies;
     std::vector<DistanceJoint> distanceJoints;
     Vector3f g;
@@ -131,9 +139,63 @@ struct World{
     inline Vector3f GetAngularVelocity(BodyId bodyId){
         return bodies[bodyId].ω;
     }
+    inline float GetInverseMass(BodyId bodyId){
+        return bodies[bodyId].inverseMass;
+    }
+    inline Matrix3f GetTransformedInverseInertia(BodyId bodyId) const{
+        return bodies[bodyId].GetTransformedInverseInertia(); 
+    }
+    inline Vector3f PointToLocal(BodyId bodyId,Vector3f p){
+        return bodies[bodyId].PointToLocal(p);
+    }
+    inline Vector3f PointToGlobal(BodyId bodyId,Vector3f r){
+        return bodies[bodyId].PointToGlobal(r);
+    }
     inline void AddJoint(DistanceJoint joint){
         distanceJoints.push_back(joint);
     }
     void step(float dt);
 };
+/*
 
+struct BodyRef{
+    private:
+    World& world;
+    BodyId id;
+    public:
+    inline Matrix4f BodyTransform(){
+        world.BodyTransform(id);
+    }
+    inline Vector3f GetPosition(){
+        world.GetPosition(id);
+    }
+    inline Quaternionf GetOrientation(){
+        world.GetOrientation(id);
+    }
+    inline Vector3f GetVelocity(){
+        world.GetVelocity(id);
+    }
+    inline Vector3f GetAngularVelocity(){
+        world.GetAngularVelocity(id);
+    }
+    inline float GetInverseMass() const {
+        world.GetInverseMass(id);
+    }
+    inline Matrix3f GetTransformedInverseInertia() const{
+        world.GetTransformedInverseInertia(id);
+    }
+    inline Vector3f GetVelocityAtPoint(Vector3f point) const{
+        return world.GetVelocityAtPoint(id,point);
+    }
+    inline Vector3f PointToLocal(Vector3f p){
+        return world.PointToLocal(id,p); 
+    }
+    inline Vector3f PointToGlobal(Vector3f r){
+        return world.PointToGlobal(id,r);
+    }
+    inline BodyId GetId(){
+        return id;
+    }
+};
+*/
+#endif

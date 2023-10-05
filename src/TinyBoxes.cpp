@@ -78,52 +78,71 @@ void PlaneConstraint::ApplyImpulse(RigidBody& body,Contact contact,float dt){
 
 
 void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
+    constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
     for(size_t i = 0;i<bodies.size()-1;i++){
         for(size_t j = i+1;j<bodies.size();j++){
             bool collisionFound = false;
             auto key = std::make_pair(i,j);
             if((bodies[i].x - bodies[j].x).Norm() <= bodies[i].collider->GetBoundingRadius() + bodies[j].collider->GetBoundingRadius()){
                 std::vector<SupportPoint> simplex;
-                auto c1 = AffineTransformCollider(bodies[i].x,bodies[i].θ,*bodies[i].collider);
-                auto c2 = AffineTransformCollider(bodies[j].x,bodies[j].θ,*bodies[j].collider);
+                const RigidBody& b1 = bodies[i];
+                const RigidBody& b2 = bodies[j];
+                auto c1 = AffineTransformCollider(b1.x,b1.θ,*b1.collider);
+                auto c2 = AffineTransformCollider(b2.x,b2.θ,*b2.collider);
+                
                 if(gjk(simplex,c1,c2)){
-                    last_contact[key] = 0;
+                    //last_contact[key] = 0;
                     collisionFound = true;
                     auto contact = EPA(simplex,c1,c2);
                     if(std::isnan(contact.depth)) continue;
-                    std::vector<Contact>& contacts = violations[key];
-                    if(bodies[i].collider->GetType() != ColliderType::Polyhedron || bodies[j].collider->GetType() != ColliderType::Polyhedron) {
+                    contact.r1 = b1.PointToLocal(contact.point);
+                    contact.r2 = b2.PointToLocal(contact.point);
+                    auto& contacts = violations[key];
+                    if(b1.collider->GetType() != ColliderType::Polyhedron || b2.collider->GetType() != ColliderType::Polyhedron) {
                         contacts.clear();
                         contacts.push_back(contact);
-                        last_contact[key] = 0;
+                        //last_contact[key] = 0;
                         continue;
                     }
-                    bool isResting = (bodies[i].GetVelocityAtPoint(contact.point) - bodies[j].GetVelocityAtPoint(contact.point)).NormSquared() <= RESTING_VELOCITY;
-                    if(!isResting){
-                        contacts.clear();
-                    }
+                    //bool isResting = (b1.GetVelocityAtPoint(contact.point) - b2.GetVelocityAtPoint(contact.point)).NormSquared() <= RESTING_VELOCITY;
+                    //if(!isResting){
+                        //contacts.clear();
+                    //}
                     bool replacedContact = false;
                     
                     for(Contact& c:contacts){
                         float dot = Dot(c.normal,contact.normal);
-                        if((1 - dot * dot) <= CONTACT_NORMAL_TOLLERANCE && (c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE && fabs(contact.depth - c.depth) <= CONTACT_DEPTH_TOLLERANCE ){
+                        //(1 - dot * dot) <= CONTACT_NORMAL_TOLLERANCE && 
+                        //fabs(contact.depth - c.depth) <= CONTACT_DEPTH_TOLLERANCE 
+                        if((c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE ){
                             c = contact;
                             replacedContact = true;
                             break;
                         }
                     }
 
-                    const RigidBody& b1 = bodies[i];
-                    const RigidBody& b2 = bodies[j];
+                    //contacts.erase(std::remove_if(contacts.begin(),contacts.end(),[&contact,b1,b2](auto c){return c.age>=CONTACT_EXPIRATION;}),contacts.end());
+                    //for(Contact& c:contacts){
+                        //c.age++;
+                    //}
                     
-                    contacts.erase(std::remove_if(contacts.begin(),contacts.end(),[&contact,b1,b2](auto c){return c.age>=CONTACT_EXPIRATION;}),contacts.end());
-                    for(Contact& c:contacts){
-                        c.age++;
-                    }
                     if(!replacedContact) contacts.push_back(contact);
                 }
             }
-            if(last_contact[key]++ >= 5) violations[key].clear();
+            //if(last_contact[key]++ >= 5) violations[key].clear();
+        }
+    }
+    for(auto& entry : violations){
+        auto i = entry.first.first,j=entry.first.second;
+        auto& b1 = bodies[i],&b2=bodies[j];
+        auto& contacts = entry.second;
+        for(auto it = contacts.begin();it != contacts.end();){
+            const Contact& c = *it;
+            if((b1.PointToGlobal(c.r1) - b2.PointToGlobal(c.r2)).NormSquared() > 0.25*CONTACT_POINT_TOLLERANCE){
+                it = contacts.erase(it);
+            }else{
+                it++;
+            }
         }
     }
 }
@@ -171,9 +190,6 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact
 void World::step(float dt){
     for(auto& body:bodies){
         if(body.inverseMass > 0) body.v += dt*g;
-        body.x += dt*body.v;
-        body.θ += dt*(body.θ*body.ω);
-        body.θ *= 1/body.θ.Norm();
     }
     plane_c.FindViolations(bodies);
     collision_c.FindViolations(bodies);
@@ -183,5 +199,10 @@ void World::step(float dt){
         for(auto& joint:distanceJoints){
             joint.ApplyImpulses(bodies,dt);
         }
+    }
+    for(auto& body:bodies){
+        body.x += dt*body.v;
+        body.θ += dt*(body.θ*body.ω);
+        body.θ *= 1/body.θ.Norm();
     }
 }
