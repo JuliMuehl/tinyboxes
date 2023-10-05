@@ -10,9 +10,34 @@ static T Clamp(const T& x,const T& lower,const T& upper){
         return lower;
     return x;
 }
-
 void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
-    contacts.clear();
+    //contacts.clear();
+    constexpr float MAX_POINT_ERROR = 1e-2;
+    for(auto it = contacts.begin();it != contacts.end();){
+        auto& body = bodies[(*it).first];
+        auto& contact = (*it).second;
+        if((contact.point - body.PointToGlobal(contact.r1)).NormSquared() > 0.25 * CONTACT_POINT_TOLLERANCE){
+            it = contacts.erase(it);
+        }else{
+            it++;
+        }
+    }
+    auto add_or_replace_contact = [this](size_t id,auto& contact){
+        bool replaced = false;
+        for(auto& pair : contacts){
+            if(pair.first == id){
+                auto& c = pair.second;
+                if((c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE){
+                    c = contact;
+                    replaced = true;
+                    break;
+                }
+            }
+        }
+        if(!replaced){
+            contacts.push_back(std::make_pair(id,contact));
+        }
+    };
     for(size_t i = 0;i<bodies.size();i++){
         const RigidBody& b = bodies[i];
         Vector3f support = b.x + b.θ.Rotate(b.collider->Support(b.θ.Conjugate().Rotate(-normal)));
@@ -29,7 +54,9 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                         contact.normal = normal;
                         contact.u1 = u1;
                         contact.u2 = u2;
-                        contacts.push_back(std::make_pair(i,contact));
+                        contact.r1 = b.PointToLocal(contact.point);
+                        add_or_replace_contact(i,contact);
+                        //contacts.push_back(std::make_pair(i,contact));
                     }
                 }
             }else{
@@ -39,7 +66,8 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                 contact.normal = normal;
                 contact.u1 = u1;
                 contact.u2 = u2;
-                contacts.push_back(std::make_pair(i,contact));
+                add_or_replace_contact(i,contact);
+                //contacts.push_back(std::make_pair(i,contact));
             }
         }
     }
@@ -78,7 +106,6 @@ void PlaneConstraint::ApplyImpulse(RigidBody& body,Contact contact,float dt){
 
 
 void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
-    constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
     for(size_t i = 0;i<bodies.size()-1;i++){
         for(size_t j = i+1;j<bodies.size();j++){
             bool collisionFound = false;

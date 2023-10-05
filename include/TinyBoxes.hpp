@@ -37,6 +37,7 @@ struct PlaneConstraint{
     static constexpr float BETA = .2;
     static constexpr float MU = .5;
     static constexpr float TOLLERANCE = 1e-5;
+    static constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
     Vector3f normal,u1,u2;
     float d;
     public:
@@ -54,7 +55,6 @@ struct PlaneConstraint{
             ApplyImpulse(bodies[id],contact,dt);
         }
     }
-
     private:
     void ApplyImpulse(RigidBody& body,Contact contact,float dt);
 };
@@ -66,10 +66,11 @@ struct CollisionConstraint{
     static constexpr float TOLLERANCE = 1e-4;
     std::map<std::pair<size_t,size_t>,std::list<Contact>> violations;
     std::map<std::pair<size_t,size_t>,int> last_contact;
-    static constexpr float RESTING_VELOCITY = 0.1f;
-    static constexpr float CONTACT_TOLLERANCE = .01;
-    static constexpr float CONTACT_DEPTH_TOLLERANCE = .01;
-    static constexpr unsigned int CONTACT_EXPIRATION = 4;
+    //static constexpr float RESTING_VELOCITY = 0.1f;
+    //static constexpr float CONTACT_TOLLERANCE = .01;
+    //static constexpr float CONTACT_DEPTH_TOLLERANCE = .01;
+    //static constexpr unsigned int CONTACT_EXPIRATION = 4;
+    static constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
     public:
     void FindViolations(const std::vector<RigidBody>& bodies);
     inline void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
