@@ -190,7 +190,7 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact
     Vector3f v1 = b1.v + Cross(r1,b1.ω);
     Vector3f v2 = b2.v + Cross(r2,b2.ω);
     Vector3f vrel = v1 - v2;
-    float lambda_n = (BETA * C / dt + Dot(contact.normal,vrel)) / K_n;
+    float lambda_n =(BETA * C/dt  + Dot(contact.normal,vrel)) / K_n;//(BETA * C / dt + Dot(contact.normal,vrel)) / K_n;
     lambda_n = std::max(lambda_n,0.0f);
 
     Vector3f J_v_u1 = contact.u1;

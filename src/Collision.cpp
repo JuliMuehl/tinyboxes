@@ -278,8 +278,8 @@ public:
 };
 
 Contact EPA(const std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2) noexcept{
-    constexpr unsigned int MAX_ITERATIONS = 100;
-    constexpr float TOLERANCE = 1e-6;
+    constexpr unsigned int MAX_ITERATIONS = 10;
+    constexpr float TOLERANCE = 1e-3;
     auto polytope = ExpandingPolytope(simplex);
     Face face;
     unsigned int i = 0;

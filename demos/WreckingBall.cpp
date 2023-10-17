@@ -1,7 +1,7 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
-
 #include "TinyBoxes.hpp"
+#include <iostream>
 
 static void drawFace(){
     glBegin(GL_TRIANGLES);
@@ -174,6 +174,7 @@ int main(int argc,char** argv){
 
     while(!glfwWindowShouldClose(window)){
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        auto start_time = std::chrono::system_clock::now();
         w.step(.01f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         glColor3f(1,1,1);
@@ -313,5 +314,9 @@ int main(int argc,char** argv){
         glPopMatrix();
         glfwSwapBuffers(window);
         glfwPollEvents();
+        auto end_time = std::chrono::system_clock::now();
+        auto duration = (end_time-start_time);
+        double fduration = std::chrono::duration<double>(duration).count();
+        std::cout << "Frame Per Second: " <<   1.0/fduration << "fps" << std::endl;
     }
 }
