@@ -195,9 +195,11 @@ struct Matrix3f{
 inline Matrix3f operator*(const Matrix3f& a,const Matrix3f& b){
     Matrix3f res;
     for(int i = 0;i<3;i++)
-        for(int j = 0;j<3;j++)
+        for(int j = 0;j<3;j++){
+            res.a[i][j] = 0;
             for(int k = 0;k<3;k++)
                 res.a[i][j] += a.a[i][k] * b.a[k][j];
+        }  
     return res;
 }
 
