@@ -1,5 +1,6 @@
+#ifndef RENDERER_HPP
+#define RENDERER_HPP
 #include "Math.hpp"
-
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -48,7 +49,7 @@ GLint compileProgram(const char* vertexShaderSource,const char* fragmentShaderSo
     glGetProgramiv(program,GL_LINK_STATUS,&status);
     if(status != GL_TRUE){
         int length;
-        glGetProgramiv(fragmentShader,GL_INFO_LOG_LENGTH,&length);
+        glGetProgramiv(program,GL_INFO_LOG_LENGTH,&length);
         char* infoLog = new char[length];
         glGetProgramInfoLog(program,length,nullptr,infoLog);
         std::cout << "Error linking program:" << std::endl 
@@ -229,11 +230,10 @@ struct CameraController{
     }
     void CursorCallback(double xpos,double ypos){
         pitch = M_PI* ypos;
-        pitch = fmod(pitch,2*M_PI);
-        if(pitch < 0) pitch += 2*M_PI;
-        yaw = M_PI*xpos;
-        yaw = fmod(yaw,2*M_PI);
-        if(yaw < 0) yaw += 2*M_PI;
+        //pitch = fmod(pitch,M_PI)
+        if(pitch < -M_PI/2) pitch = -M_PI/2;
+        if(pitch > M_PI/2) pitch = M_PI/2;
+        yaw = fmod(2*M_PI*xpos,2*M_PI);
         Matrix3f xrotmat = Matrix4f::Identity();
         Matrix3f yrotmat = Matrix4f::Identity();
         xrotmat.a[1][1] = cosf(pitch);
@@ -278,14 +278,18 @@ struct CameraController{
 
 
 struct Renderer{
+    GLuint uvBuffer;
+    GLint atmosphere_program;
+    GLint atmosphere_inUvLocation;
+    GLint atmosphere_uProjectionLocation;
+    GLint atmosphere_uViewLocation;
+    GLint atmosphere_uSunDirectionLocation;
+    
     GLint floor_program;
-    GLuint floor_uvBuffer; 
     GLint floor_inUvLocation;
     GLint floor_uProjectionLocation;
     GLint floor_uViewLocation;
-    GLint floor_uPitchLocation;
-    GLint floor_uYawLocation;
-    GLint floor_uPositionLocation;
+    
     GLint mesh_program;
     GLint mesh_inPositionLocation;
     GLint mesh_inNormalLocation;
@@ -296,6 +300,49 @@ struct Renderer{
     GLint mesh_uDiffuseLocation;
     GLint mesh_uSpecularLocation;
     GLint mesh_uEmissionLocation;
+
+    Vector3f sunDirection = Vector3f(1.0,1.0,1.0).Normalize();
+
+    static constexpr const char* atmosphere_vertexShaderSource= SHADER_STRING(
+        in vec2 inUv;
+        out vec2 fragUv;
+        void main(){
+            fragUv = inUv;
+            gl_Position = vec4(2.0 * inUv - 1.0,0.0,1.0);
+        }
+    );
+
+
+    static constexpr const char* atmosphere_fragmentShaderSource = SHADER_STRING(
+        in vec2 fragUv;
+        out vec4 fragColor;
+        uniform mat4 uView;
+        uniform mat4 uProjection;
+        uniform vec3 uSunDirection;
+
+        vec3 sun_color(vec3 direction){
+            vec3 sun_direction = uSunDirection;
+            sun_direction.x *= -1.0;
+            float dp = max(dot(sun_direction,direction),0.0);
+            float intensity = pow(dp,100);
+            return vec3(intensity);
+        }
+
+        vec3 sky_color(vec3 direction){
+            float h = 1.0-max(direction.y,0.0);
+            return vec3(h*h,h,1.0*h+0.2);
+        }
+
+        vec3 raycast_color(vec2 uv){
+            vec3 ray = (inverse(uProjection*uView)*vec4(2.0 * uv - 1.0,1.0,1.0)).xyz;
+            ray = normalize(ray);
+            return sky_color(ray) + sun_color(ray);
+        }
+
+        void main(){
+            fragColor = vec4(raycast_color(fragUv),1.0);
+        }
+    );
 
     static constexpr const char* floor_vertexShaderSource = SHADER_STRING(
         in vec2 inUv;
@@ -316,6 +363,7 @@ struct Renderer{
     static constexpr const char* floor_fragmentShaderSource = SHADER_STRING(
         in vec2 fragXZ;
         out vec4 outCol;
+
         void main(){
             vec2 xz = round(fragXZ);
             if(mod(xz.x,2) == mod(xz.y,2)){
@@ -323,7 +371,6 @@ struct Renderer{
             }else{
                 outCol = vec4(vec3(0.2),1.0);
             }
-            //outCol = vec4(abs(vec3(direction.y)),1.0);
         }
     );
 
@@ -369,9 +416,6 @@ struct Renderer{
     );
 
     Renderer(){
-        floor_program = compileProgram(floor_vertexShaderSource,floor_fragmentShaderSource);
-        glUseProgram(floor_program);
-
         float uvData[] = {
             0.0,0.0,
             0.0,1.0,
@@ -380,17 +424,21 @@ struct Renderer{
             1.0,0.0,
             1.0,1.0
         };
-        glGenBuffers(1,&floor_uvBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER,floor_uvBuffer);
+        glGenBuffers(1,&uvBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
         glBufferData(GL_ARRAY_BUFFER,sizeof(uvData),&uvData[0],GL_STATIC_DRAW);
 
+        atmosphere_program = compileProgram(atmosphere_vertexShaderSource,atmosphere_fragmentShaderSource);
+        atmosphere_inUvLocation = glGetAttribLocation(atmosphere_program,"inUv");
+        atmosphere_uProjectionLocation = glGetUniformLocation(atmosphere_program,"uProjection");
+        atmosphere_uViewLocation = glGetUniformLocation(atmosphere_program,"uView");
+        atmosphere_uSunDirectionLocation = glGetUniformLocation(atmosphere_program,"uSunDirection");
+
+        floor_program = compileProgram(floor_vertexShaderSource,floor_fragmentShaderSource);
         floor_inUvLocation = glGetAttribLocation(floor_program,"inUv");
         
         floor_uProjectionLocation = glGetUniformLocation(floor_program,"uProjection");
         floor_uViewLocation = glGetUniformLocation(floor_program,"uView");
-        floor_uPitchLocation = glGetUniformLocation(floor_program,"uPitch");
-        floor_uYawLocation = glGetUniformLocation(floor_program,"uYaw");
-        floor_uPositionLocation = glGetUniformLocation(floor_program,"uPosition");
 
         mesh_program = compileProgram(mesh_vertexShaderSource,mesh_fragmentShaderSource);
         mesh_inPositionLocation = glGetAttribLocation(mesh_program,"inPosition");
@@ -407,19 +455,30 @@ struct Renderer{
     }
 
     void Render(const CameraController& cam,const std::vector<std::shared_ptr<Mesh>>& meshes,const std::vector<Material>& materials,const std::vector<Matrix4f>& poses){
+      
+        //Render Atmosphere
+        glUseProgram(atmosphere_program);
+        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
+        glEnableVertexAttribArray(atmosphere_inUvLocation);
+        glVertexAttribPointer(atmosphere_inUvLocation,2,GL_FLOAT,GL_FALSE,0,nullptr);
+        glUniformMatrix4fv(atmosphere_uProjectionLocation,1,GL_TRUE,&cam.projectionMatrix.a[0][0]);
+        glUniformMatrix4fv(atmosphere_uViewLocation,1,GL_TRUE,&cam.viewMatrix.a[0][0]);
+        glUniform3f(atmosphere_uSunDirectionLocation,sunDirection.x,sunDirection.y,sunDirection.z);
+        glDrawArrays(GL_TRIANGLES,0,6);
+        //Atmosphere is infinitely far away from the camera.
+        //We just clear the depth buffer such that everything else is drawn on top.
+        glClear(GL_DEPTH_BUFFER_BIT);
+      
+
         //Render Ground Plane (Floor)
         glUseProgram(floor_program);
-        glBindBuffer(GL_ARRAY_BUFFER,floor_uvBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
         glEnableVertexAttribArray(floor_inUvLocation);
         glVertexAttribPointer(floor_inUvLocation,2,GL_FLOAT,GL_FALSE,0,nullptr);
         glUniformMatrix4fv(floor_uProjectionLocation,1,GL_TRUE,&cam.projectionMatrix.a[0][0]);
         glUniformMatrix4fv(floor_uViewLocation,1,GL_TRUE,&cam.viewMatrix.a[0][0]);
-        //glUniform1f(environment_uPitchLocation,cam.pitch);
-        //glUniform1f(environment_uYawLocation,cam.yaw);
-        //glUniform3f(environment_uPositionLocation,cam.eyePosition.x,cam.eyePosition.y,cam.eyePosition.z);
-        glDrawArrays(GL_TRIANGLES,0,6);
+        glDrawArrays(GL_TRIANGLES,0,6);       
 
-        
         //Render Meshes
         glUseProgram(mesh_program);
         
@@ -447,16 +506,15 @@ struct Renderer{
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh->faceBuffer);
             glDrawElements(GL_TRIANGLES,mesh->numElements,GL_UNSIGNED_INT,nullptr);
         }
+
     }
 };
-
-
+/*
 int main(){
     if(!glfwInit()){
         std::cout << "Error initializing GLFW" << std::endl;
     }
     auto* window = glfwCreateWindow(640,480,"Tinyboxes Visualization",nullptr,nullptr);
-    glViewport(0,0,640,480);
     glfwMakeContextCurrent(window);
     if(glewInit()){
         std::cout << "Error initializing GLEW" << std::endl;
@@ -488,7 +546,7 @@ int main(){
         cam.ResizeCallback(width,height);
         glViewport(0,0,width,height);
         if(processInput){
-            cam.CursorCallback(xpos/width,ypos/height);
+            cam.CursorCallback(xpos/width-0.5,ypos/height-0.5);
             
             cam.KeyCallback(window);
             if(glfwGetKey(window,GLFW_KEY_ESCAPE) == GLFW_PRESS){
@@ -505,4 +563,5 @@ int main(){
         glfwPollEvents();
     }
 }
-
+*/
+#endif
