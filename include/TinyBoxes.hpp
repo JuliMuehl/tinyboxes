@@ -11,24 +11,24 @@
 
 struct RigidBody{
     Vector3f x;
-    Quaternionf θ;
+    Quaternionf theta;
     Vector3f v;
-    Vector3f ω;
+    Vector3f omega;
     Matrix3f inverseInertia;
     float inverseMass;
     std::shared_ptr<ConvexCollider> collider;
     inline Vector3f GetVelocityAtPoint(Vector3f point) const{
         Vector3f r = x - point;
-        return Cross(ω,r) + v;
+        return Cross(omega,r) + v;
     }
     inline Vector3f PointToLocal(Vector3f p) const {
-        return θ.Conjugate().Rotate(p-x);
+        return theta.Conjugate().Rotate(p-x);
     }
     inline Vector3f PointToGlobal(Vector3f r) const {
-        return θ.Rotate(r) + x;
+        return theta.Rotate(r) + x;
     }
     inline Matrix3f GetTransformedInverseInertia() const{
-        return Matrix3f(θ) * inverseInertia * Matrix3f(θ.Conjugate());
+        return Matrix3f(theta) * inverseInertia * Matrix3f(theta.Conjugate());
     }
 };
 
@@ -125,19 +125,19 @@ struct World{
     }
     inline Matrix4f BodyTransform(BodyId bodyId){
         const RigidBody& body = bodies[bodyId];
-        return Matrix4f(Matrix3f(body.θ),body.x);
+        return Matrix4f(Matrix3f(body.theta),body.x);
     }
     inline Vector3f GetPosition(BodyId bodyId){
         return bodies[bodyId].x;
     }
     inline Quaternionf GetOrientation(BodyId bodyId){
-        return bodies[bodyId].θ;
+        return bodies[bodyId].theta;
     }
     inline Vector3f GetVelocity(BodyId bodyId){
         return bodies[bodyId].v;
     }
     inline Vector3f GetAngularVelocity(BodyId bodyId){
-        return bodies[bodyId].ω;
+        return bodies[bodyId].omega;
     }
     inline float GetInverseMass(BodyId bodyId){
         return bodies[bodyId].inverseMass;
