@@ -207,16 +207,23 @@ struct Matrix4f{
     Matrix4f(Matrix3f m3,Vector3f v){
         for(int i = 0;i<3;i++){
             for(int j = 0;j<3;j++){
-                a[i][j] = m3.a[i][j];
+                a[i][j] = m3.a[j][i];
             }
         }
         for(int i = 0;i<4;i++){
-            a[i][3] = 0;
+            a[3][i] = 0;
         }
-        a[3][0] = v.x;
-        a[3][1] = v.y;
-        a[3][2] = v.z;
+        a[0][3] = v.x;
+        a[1][3] = v.y;
+        a[2][3] = v.z;
         a[3][3] = 1;
+    }
+    Vector4f Transform(Vector4f v){
+        return Vector4f(
+                    a[0][0] * v.x + a[0][1] * v.y + a[0][2] * v.z + a[0][3]* v.w,
+                    a[1][0] * v.x + a[1][1] * v.y + a[1][2] * v.z + a[1][3]* v.w,
+                    a[2][0] * v.x + a[2][1] * v.y + a[2][2] * v.z + a[2][3]* v.w,
+                    a[3][0] * v.x + a[3][1] * v.y + a[3][2] * v.z + a[3][3]* v.w);
     }
     static Matrix4f Identity(){
         Matrix4f m;
