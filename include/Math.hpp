@@ -238,12 +238,12 @@ struct Matrix4f{
             }
         }
         for(int i = 0;i<4;i++){
-            a[i][3] = 0;
+            a[3][i] = 0.0;
         }
-        a[3][0] = v.x;
-        a[3][1] = v.y;
-        a[3][2] = v.z;
-        a[3][3] = 1;
+        a[0][3] = v.x;
+        a[1][3] = v.y;
+        a[2][3] = v.z;
+        a[3][3] = 1.0;
     }
     static Matrix4f Identity(){
         Matrix4f m;
