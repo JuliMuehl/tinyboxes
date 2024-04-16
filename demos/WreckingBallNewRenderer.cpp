@@ -101,9 +101,9 @@ int main(int argc,char** argv){
     BodyId b34 = w.AddBody({Vector3f(-4.1,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
 
     BodyId ball1 = w.AddBody({Vector3f(3.0,8,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
-    BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(70,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider_sphere});
+    BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(50,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider});
 
-    //w.AddJoint(DistanceJoint(ball1,ball2,3));
+    w.AddJoint(DistanceJoint(ball1,ball2,3));
 
     if(!glfwInit()){
         std::cout << "Error initializing GLFW" << std::endl;
@@ -124,6 +124,8 @@ int main(int argc,char** argv){
     Material blackPlastic = Material(Vector3f(0.0f,0.0f,0.0f),Vector3f(0.1f,0.1f,0.1f),Vector3f(0.5f,0.5f,0.5f ),Vector3f(0.0,0.0,0.0));
     Material turquoise = Material(Vector3f(0.1f, 0.18725f, 0.1745f),Vector3f(0.396f, 0.74151f, 0.69102f),Vector3f(0.297254f, 0.30829f, 0.306678f),Vector3f(0.0,0.0,0.0));
     Material polishedSilver = Material(Vector3f(0.19225f, 0.19225f, 0.19225f),Vector3f(0.50754f, 0.50754f, 0.50754f),Vector3f(0.508273f, 0.508273f, 0.508273f),Vector3f(0.0,0.0,0.0));;
+    Material obsidian = Material(Vector3f(0.05375f, 0.05f, 0.06625f),Vector3f(0.18275f, 0.17f, 0.22525f),Vector3f(0.332741f, 0.328634f, 0.346435f),Vector3f(0.0,0.0,0.0));;
+    Material gold = Material(Vector3f(0.24725f, 0.1995f, 0.0745f),Vector3f(0.75164f, 0.60648f, 0.22648f),Vector3f(0.628281f, 0.555802f, 0.366065f),Vector3f(0.1,0.1,0.1));
     std::vector<Material> materials = {};
     for(int i = 0;i<12;i++){
         meshes.push_back(cubeMesh);
