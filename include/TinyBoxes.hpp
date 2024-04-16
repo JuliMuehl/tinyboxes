@@ -34,7 +34,7 @@ struct RigidBody{
 
 struct PlaneConstraint{
     private:
-    static constexpr float BETA = .2;
+    static constexpr float BETA = .01;
     static constexpr float MU = .5;
     static constexpr float TOLLERANCE = 1e-5;
     Vector3f normal,u1,u2;
@@ -61,7 +61,7 @@ struct PlaneConstraint{
 
 struct CollisionConstraint{
     private:
-    static constexpr float BETA = .2;
+    static constexpr float BETA = .1;
     static constexpr float MU = 0.5;
     static constexpr float TOLLERANCE = 1e-4;
     std::map<std::pair<size_t,size_t>,std::list<Contact>> violations;
@@ -111,7 +111,7 @@ using BodyId = uint64_t;
 
 struct World{
     private:
-    static constexpr int GAUSS_SEIDEL_ITERATIONS = 10;
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 100;
     std::vector<RigidBody> bodies;
     std::vector<DistanceJoint> distanceJoints;
     Vector3f g;
