@@ -8,7 +8,6 @@ TinyBoxes has no external dependencies despite OpenGL/GLEW and GLFW which are on
 
 [WreckingBallDemo.webm](https://github.com/user-attachments/assets/bfb82e7a-7317-45a8-81c2-ac4d2eb713e5)
 
-
 ## Usage
 
 ```c++
@@ -51,4 +50,4 @@ You can use the following command to build the demos (requires g++, glfw, GLEW a
 ```bash 
 g++ -lGL -lGLEW -lglfw -lm -I include src/*.cpp demos/<insert_demo_name>.cpp -o <insert_demo_name>
 ```
-
+Press Space to pause/unpause the demo.
