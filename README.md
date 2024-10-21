@@ -6,7 +6,6 @@ TinyBoxes has no external dependencies despite OpenGL and GLFW which are only re
 
 ## Demos
 
-"WreckingBallDemo.mp4"
 
 
 ## Usage
