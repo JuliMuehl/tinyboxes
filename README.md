@@ -50,9 +50,5 @@ You can use the following command to build the demos (requires g++, glfw and Ope
 
 ```bash 
 g++ -lGL -lglfw -lm -I include src/*.cpp demos/<insert_demo_name>.cpp -o <insert_demo_name>
-``` 
-
-## Status
-
-In active developement.
+```
 
