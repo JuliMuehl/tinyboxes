@@ -5,8 +5,8 @@ The engine currently features collision detection between convex shapes using th
 TinyBoxes has no external dependencies despite OpenGL and GLFW which are only required for the demos.
 
 ## Demos
-<img src = "https://i.postimg.cc/d3tPpnZC/Wrecking-Ball-Screenshot.gif" width=300 height=300>
-<img src = "https://i.postimg.cc/XJgkTwTS/Driving-Screenshot.gif" width=300 height=300>
+
+<video src = "WreckBallDemo.mp4" width=300 height=300>
 
 
 ## Usage
