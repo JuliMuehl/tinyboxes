@@ -16,7 +16,6 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 }
 
 int main(int argc,char** argv){
-    float theta = 0;
     World w = World();
 
     std::vector<Vector3f> cv = {{-1,-1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,-1},{-1,1,-1},{1,1,-1},{1,-1,-1}};
@@ -92,6 +91,7 @@ int main(int argc,char** argv){
     bool processInput = true;
 
     while(!glfwWindowShouldClose(window)){
+        auto start_time = std::chrono::system_clock::now();
         if(stepWorld)
             w.step(0.01);
         Vector3f pos = w.GetPosition(ball2);
@@ -112,7 +112,6 @@ int main(int argc,char** argv){
             
             cam.KeyCallback(window);
             if(glfwGetKey(window,GLFW_KEY_ESCAPE) == GLFW_PRESS){
-                std::cout << "ESCAPE PRESSED" << std::endl;
                 processInput = false;
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             }
