@@ -23,12 +23,12 @@ int main(){
     BodyId body1 = w.AddBody({Vector3f(0,4,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
     //Create a second body and add it to the world
     BodyId body2 = w.AddBody({Vector3f(0,7,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
-    //Creates a third body and add it to the world
+    //Create a third body and add it to the world
     BodyId body3 = w.AddBody({Vector3f(0,10,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),1.0,collider_sphere});
     //Create a joint and add it to the world
     w.AddJoint(DistanceJoint(body1,body2,3.0)); 
     while(true){
-        // Make an integration step of size .01
+        // Make a (euler) integration step with step size .01
         w.step(.01f); 
         //Get the position and orientation of the bodies as 4x4 Matrices
         Matrix4f mat1 = w.BodyTransform(body1);
