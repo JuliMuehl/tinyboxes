@@ -2,7 +2,7 @@
 A small 3D rigid body dynamics engine written in C++.
 The engine currently features collision detection between convex shapes using the GJK and EPA algorithms as well as collision resolution using  Projected Gauss Seidel Iteration (a.k.a. Sequential Impulses). The engine also implements a simple distance constraint and additional joints (hinge, ball and socket joint) may be added in the future.
 
-TinyBoxes has no external dependencies despite OpenGL and GLFW which are only required for the demos.
+TinyBoxes has no external dependencies despite OpenGL/GLEW and GLFW which are only required for the demos.
 
 ## Demos
 
@@ -49,6 +49,6 @@ Have a look at the demos/ directory for additional examples of how the engine ca
 You can use the following command to build the demos (requires g++, glfw and OpenGl to be installed on your system)
 
 ```bash 
-g++ -lGL -lglfw -lm -I include src/*.cpp demos/<insert_demo_name>.cpp -o <insert_demo_name>
+g++ -lGL -lGLEW -lglfw -lm -I include src/*.cpp demos/<insert_demo_name>.cpp -o <insert_demo_name>
 ```
 
