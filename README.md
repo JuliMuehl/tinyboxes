@@ -46,7 +46,7 @@ int main(){
 Have a look at the demos/ directory for additional examples of how the engine can be used.
 
 ## Build Instructions
-You can use the following command to build the demos (requires g++, glfw and OpenGl to be installed on your system)
+You can use the following command to build the demos (requires g++, glfw, GLEW and OpenGL to be installed on your system)
 
 ```bash 
 g++ -lGL -lGLEW -lglfw -lm -I include src/*.cpp demos/<insert_demo_name>.cpp -o <insert_demo_name>
