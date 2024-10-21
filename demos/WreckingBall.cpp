@@ -1,145 +1,80 @@
-#include <GL/gl.h>
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
+#include "Renderer.hpp"
 #include "TinyBoxes.hpp"
-
-static void drawFace(){
-    glBegin(GL_TRIANGLES);
-        glVertex3f(1,-1,1);
-        glVertex3f(-1,-1,1);
-        glVertex3f(1,1,1);
-
-        glVertex3f(-1,-1,1);
-        glVertex3f(1,1,1);
-        glVertex3f(-1,1,1);
-    glEnd();
-}
-
-static void drawSphere(float radius){
-    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
-    glColor3f(0,.8,.7);
-    auto x = [](float u,float v){return cosf(u) * cosf(v);};
-    auto y = [](float u,float v){return cosf(u) * sinf(v);};
-    auto z = [](float u,float v){return sinf(u);};
-
-    float n = 16.0f;
-    glPushMatrix();
-        glScalef(radius,radius,radius);
-        glBegin(GL_TRIANGLES);
-        for(int i = 0;i<n;i++){
-            for(int j = 0;j<n;j++){
-                float u = i/n * 2*M_PI;
-                float u_ = (i+1)/n * 2*M_PI;
-                float v = j/n * 2*M_PI;
-                float v_ = (j+1)/n * 2*M_PI;
-                glVertex3f(x(u,v),y(u,v),z(u,v));
-                glVertex3f(x(u_,v_),y(u_,v_),z(u_,v_));
-                glVertex3f(x(u_,v),y(u_,v),z(u_,v));
-
-                glVertex3f(x(u,v),y(u,v),z(u,v));
-                glVertex3f(x(u_,v_),y(u_,v_),z(u_,v_));
-                glVertex3f(x(u,v_),y(u,v_),z(u,v_));
-            }
-        }
-        glEnd();
-    glPopMatrix();
-    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-    glColor3f(.0,.0,.0);
-    glPushMatrix();
-        glScalef(radius,radius,radius);
-        glBegin(GL_TRIANGLES);
-        for(int i = 0;i<n;i++){
-            for(int j = 0;j<n;j++){
-                float u = i/n * 2*M_PI;
-                float u_ = (i+1)/n * 2*M_PI;
-                float v = j/n * 2*M_PI;
-                float v_ = (j+1)/n * 2*M_PI;
-                glVertex3f(x(u,v),y(u,v),z(u,v));
-                glVertex3f(x(u_,v_),y(u_,v_),z(u_,v_));
-                glVertex3f(x(u_,v),y(u_,v),z(u_,v));
-
-                glVertex3f(x(u,v),y(u,v),z(u,v));
-                glVertex3f(x(u_,v_),y(u_,v_),z(u_,v_));
-                glVertex3f(x(u,v_),y(u,v_),z(u,v_));
-            }
-        }
-        glEnd();
-    glPopMatrix();
-}
-
-static void drawCube(float scale=1){
-    glColor3f(0,.8f,.7f);
-    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
-    glPushMatrix();
-        glScalef(scale,scale,scale);
-        glPushMatrix();
-            glRotatef(0,1,0,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(90,1,0,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(180,1,0,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(270,1,0,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(90,0,1,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(270,0,1,0);
-            drawFace();
-        glPopMatrix();
-    glPopMatrix();
-    glColor3f(0,0,0);
-    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-    glPushMatrix();
-        glScalef(scale,scale,scale);
-        glPushMatrix();
-            glRotatef(0,1,0,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(90,1,0,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(180,1,0,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(90,0,1,0);
-            drawFace();
-        glPopMatrix();
-        glPushMatrix();
-            glRotatef(270,0,1,0);
-            drawFace();
-        glPopMatrix();
-    glPopMatrix();
-}
+#include <iostream>
 
 #include <thread>
 #include <chrono>
 
-int main(int argc,char** argv){
-    glfwInit();
-    GLFWwindow* window = glfwCreateWindow(800,800,"Boxes",NULL,NULL);
+
+/*
+int main(){
+    if(!glfwInit()){
+        std::cout << "Error initializing GLFW" << std::endl;
+    }
+    auto* window = glfwCreateWindow(640,480,"Tinyboxes Visualization",nullptr,nullptr);
     glfwMakeContextCurrent(window);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glFrustum(-1,1,-1,1,1,100);
+    if(glewInit()){
+        std::cout << "Error initializing GLEW" << std::endl;
+    }
+
+    std::shared_ptr<Mesh> mesh = Mesh::CreateSphere(1.0);
+    std::vector<std::shared_ptr<Mesh>> meshes = {mesh};
+    std::vector<Matrix4f> poses = {Matrix4f::Identity()};
+    std::vector<Material> materials = {Material(Vector3f(0.0f,0.0f,0.0f),Vector3f(0.5f,0.0f,0.0f),Vector3f(0.7f,0.6f,0.6f ),Vector3f(0.0,0.0,0.0))};
+    poses[0].a[1][3] = 1.0;
+    auto renderer = Renderer();
+    
+    glClearColor(0.0,0.0,0.0,1.0);
     glEnable(GL_DEPTH_TEST);
-    glMatrixMode(GL_MODELVIEW);
-    glClearColor(0,0,0,1);
+
+    CameraController cam = CameraController(45.0,640.0/480.0,0.5,1000.0);
+
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    bool processInput = true;
+    while(!glfwWindowShouldClose(window)){
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+        renderer.Render(cam,meshes,materials,poses);
+        double xpos,ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        
+        int width,height;
+        glfwGetWindowSize(window,&width,&height);
+        cam.ResizeCallback(width,height);
+        glViewport(0,0,width,height);
+        if(processInput){
+            cam.CursorCallback(xpos/width-0.5,ypos/height-0.5);
+            
+            cam.KeyCallback(window);
+            if(glfwGetKey(window,GLFW_KEY_ESCAPE) == GLFW_PRESS){
+                std::cout << "ESCAPE PRESSED" << std::endl;
+                processInput = false;
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
+        }
+        if(!processInput && glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS){
+            processInput = true;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+}
+
+*/
+
+bool stepWorld = false;
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
+        stepWorld = !stepWorld;
+    }    
+}
+
+int main(int argc,char** argv){
     float theta = 0;
     World w = World();
 
@@ -166,151 +101,85 @@ int main(int argc,char** argv){
     BodyId b34 = w.AddBody({Vector3f(-4.1,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
 
     BodyId ball1 = w.AddBody({Vector3f(3.0,8,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
-    BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(70,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider});
+    BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(50,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider});
 
     w.AddJoint(DistanceJoint(ball1,ball2,3));
+
+    if(!glfwInit()){
+        std::cout << "Error initializing GLFW" << std::endl;
+        return 1;
+    }
+    auto* window = glfwCreateWindow(640,480,"Tinyboxes Visualization",nullptr,nullptr);
+    glfwMakeContextCurrent(window);
+    glfwSetKeyCallback(window, keyCallback);
+    if(glewInit()){
+        std::cout << "Error initializing GLEW" << std::endl;
+        return 1;
+    }
+    std::vector<BodyId> bodies = {b11,b12,b13,b14,b21,b22,b23,b24,b31,b32,b33,b34,ball1,ball2};
+    std::shared_ptr<Mesh> sphereMesh = Mesh::CreateSphere(1.0);
+    std::shared_ptr<Mesh> cubeMesh = Mesh::CreateCube(1.0,1.0,1.0);
+    std::vector<std::shared_ptr<Mesh>> meshes = {};
+    Material redPlastic = Material(Vector3f(0.0f,0.0f,0.0f),Vector3f(0.5f,0.0f,0.0f),Vector3f(0.7f,0.6f,0.6f ),Vector3f(0.0,0.0,0.0));
+    Material blackPlastic = Material(Vector3f(0.0f,0.0f,0.0f),Vector3f(0.1f,0.1f,0.1f),Vector3f(0.5f,0.5f,0.5f ),Vector3f(0.0,0.0,0.0));
+    Material turquoise = Material(Vector3f(0.1f, 0.18725f, 0.1745f),Vector3f(0.396f, 0.74151f, 0.69102f),Vector3f(0.297254f, 0.30829f, 0.306678f),Vector3f(0.0,0.0,0.0));
+    Material polishedSilver = Material(Vector3f(0.19225f, 0.19225f, 0.19225f),Vector3f(0.50754f, 0.50754f, 0.50754f),Vector3f(0.508273f, 0.508273f, 0.508273f),Vector3f(0.0,0.0,0.0));;
+    Material obsidian = Material(Vector3f(0.05375f, 0.05f, 0.06625f),Vector3f(0.18275f, 0.17f, 0.22525f),Vector3f(0.332741f, 0.328634f, 0.346435f),Vector3f(0.0,0.0,0.0));;
+    Material gold = Material(Vector3f(0.24725f, 0.1995f, 0.0745f),Vector3f(0.75164f, 0.60648f, 0.22648f),Vector3f(0.628281f, 0.555802f, 0.366065f),Vector3f(0.1,0.1,0.1));
+    std::vector<Material> materials = {};
+    for(int i = 0;i<12;i++){
+        meshes.push_back(cubeMesh);
+        materials.push_back(polishedSilver);
+    }
+    for(int i = 0;i<2;i++){
+        meshes.push_back(sphereMesh);
+        materials.push_back(blackPlastic);
+    }
+    std::vector<Matrix4f> poses = {};
+    for(int i = 0;i<bodies.size();i++){
+        poses.push_back(w.BodyTransform(bodies[i]));
+    }
+
+    auto renderer = Renderer();
     
-    glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+    glClearColor(0.0,0.0,0.0,1.0);
+    glEnable(GL_DEPTH_TEST);
+
+    CameraController cam = CameraController(45.0,640.0/480.0,0.5,1000.0);
+    cam.eyePosition = Vector3f(0.0,-10.0,-10.0);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    bool processInput = true;
 
     while(!glfwWindowShouldClose(window)){
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        w.step(.01f);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        glColor3f(1,1,1);
-        glPushMatrix();
-            glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
-            glTranslatef(0,0,-30);
-            glRotatef(40,1,0,0);
-            glPushMatrix();
-                glBegin(GL_QUADS);
-                    for(int i = -100;i<=100;i++){
-                        for(int j = -100;j<=100;j++){
-                            glVertex3f(i + 1,0, j + 1);
-                            glVertex3f(i - 1,0, j + 1);
-                            glVertex3f(i - 1,0, j - 1);
-                            glVertex3f(i + 1,0, j - 1);
-                        }
-                    }
-                glEnd();
-            glPopMatrix();
-            glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b11);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
+        if(stepWorld)
+            w.step(0.01);
+        Vector3f pos = w.GetPosition(ball2);
+        
+        for(int i = 0;i<bodies.size();i++){
+            poses[i] = w.BodyTransform(bodies[i]);
+        }
+        renderer.Render(cam,meshes,materials,poses);
+        double xpos,ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+        
+        int width,height;
+        glfwGetWindowSize(window,&width,&height);
+        cam.ResizeCallback(width,height);
+        glViewport(0,0,width,height);
+        if(processInput){
+            cam.CursorCallback(xpos/width-0.5,ypos/height-0.5);
+            
+            cam.KeyCallback(window);
+            if(glfwGetKey(window,GLFW_KEY_ESCAPE) == GLFW_PRESS){
+                std::cout << "ESCAPE PRESSED" << std::endl;
+                processInput = false;
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b12);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b13);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b14);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b21);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b22);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b23);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b24);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b31);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b32);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b33);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(b34);
-                glMultMatrixf(&mat.a[0][0]);
-                drawCube(1);
-            }
-            glPopMatrix();
-
-
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(ball1);
-                glMultMatrixf(&mat.a[0][0]);
-                drawSphere(1);
-            }
-            glPopMatrix();
-
-            glPushMatrix();
-            {
-                Matrix4f mat = w.BodyTransform(ball2);
-                glMultMatrixf(&mat.a[0][0]);
-                drawSphere(1);
-            }
-            glPopMatrix();
-
-
-        glPopMatrix();
+        }
+        if(!processInput && glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS){
+            processInput = true;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
