@@ -234,8 +234,10 @@ struct CameraController{
         if(pitch < -M_PI/2) pitch = -M_PI/2;
         if(pitch > M_PI/2) pitch = M_PI/2;
         yaw = fmod(2*M_PI*xpos,2*M_PI);
+
         Matrix3f xrotmat = Matrix3f::Identity();
         Matrix3f yrotmat = Matrix3f::Identity();
+
         xrotmat.a[1][1] = cosf(pitch);
         xrotmat.a[1][2] = -sinf(pitch);
         xrotmat.a[2][1] = sinf(pitch);
@@ -300,9 +302,14 @@ struct Renderer{
     GLint mesh_uDiffuseLocation;
     GLint mesh_uSpecularLocation;
     GLint mesh_uEmissionLocation;
+<<<<<<< HEAD
     GLint mesh_uSunDirectionLocation;
 
     Vector3f sunDirection = Vector3f(0.0,1.0,3.0).Normalize();
+=======
+
+    Vector3f sunDirection = Vector3f(1.0,1.0,1.0).Normalize();
+>>>>>>> main
 
     static constexpr const char* atmosphere_vertexShaderSource= SHADER_STRING(
         in vec2 inUv;
@@ -337,7 +344,10 @@ struct Renderer{
         vec3 raycast_color(vec2 uv){
             vec3 ray = (inverse(uProjection*uView)*vec4(2.0 * uv - 1.0,1.0,1.0)).xyz;
             ray = normalize(ray);
+<<<<<<< HEAD
             ray.x *= -1.0;
+=======
+>>>>>>> main
             return sky_color(ray) + sun_color(ray);
         }
 
@@ -383,14 +393,25 @@ struct Renderer{
             out vec3 fragNormal;
             out vec3 fragPosition;
 
+<<<<<<< HEAD
+=======
+            mat4 model = mat4(1.0);
+            mat4 cam = mat4(1.0);
+>>>>>>> main
             uniform mat4 uView;
             uniform mat4 uProjection;
             uniform mat4 uModel;
 
             void main(){
+<<<<<<< HEAD
                 fragNormal = mat3(uModel) * inNormal;
                 vec4 modelPosition = uModel*vec4(inPosition,1.0);
                 vec3 eyePosition = inverse(uView)[3].xyz;
+=======
+                fragNormal = mat3(model) * inNormal;
+                vec4 modelPosition = uModel*vec4(inPosition,1.0);
+                vec3 eyePosition = -transpose(mat3(uView))*uView[3].xyz;
+>>>>>>> main
                 fragPosition = eyePosition - modelPosition.xyz;
                 gl_Position = uProjection*uView*modelPosition;
             }
@@ -404,9 +425,15 @@ struct Renderer{
             uniform vec3 uDiffuse;
             uniform vec3 uSpecular;
             uniform vec3 uEmission;
+<<<<<<< HEAD
             uniform vec3 uSunDirection;
             float lightIntenisity = 0.8;
             vec3 lightDir = normalize(uSunDirection);
+=======
+
+            float lightIntenisity = 0.8;
+            vec3 lightDir = normalize(vec3(0.4,0.6,1.0));
+>>>>>>> main
             void main(){
                 float specularCoeff = pow(max(-dot(reflect(lightDir,fragNormal),normalize(fragPosition)),0.0),6.0);
                 float diffuseCoeff = max(dot(lightDir,fragNormal),0.0);
@@ -450,7 +477,11 @@ struct Renderer{
         mesh_uDiffuseLocation = glGetUniformLocation(mesh_program,"uDiffuse");
         mesh_uSpecularLocation = glGetUniformLocation(mesh_program,"uSpecular");
         mesh_uEmissionLocation = glGetUniformLocation(mesh_program,"uEmission");
+<<<<<<< HEAD
         mesh_uSunDirectionLocation = glGetUniformLocation(mesh_program,"uSunDirection");
+=======
+        
+>>>>>>> main
 
     }
 
@@ -494,7 +525,11 @@ struct Renderer{
             glUniform3f(mesh_uDiffuseLocation,mat.diffuse.x,mat.diffuse.y,mat.diffuse.z);
             glUniform3f(mesh_uSpecularLocation,mat.specular.x,mat.specular.y,mat.specular.z);
             glUniform3f(mesh_uEmissionLocation,mat.emission.x,mat.emission.y,mat.emission.z);
+<<<<<<< HEAD
             glUniform3f(mesh_uSunDirectionLocation,sunDirection.x,sunDirection.y,sunDirection.z);
+=======
+
+>>>>>>> main
             glBindBuffer(GL_ARRAY_BUFFER,mesh->vertexBuffer);
             glEnableVertexAttribArray(mesh_inPositionLocation);
             glVertexAttribPointer(mesh_inPositionLocation,3,GL_FLOAT,GL_FALSE,0,nullptr);

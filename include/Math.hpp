@@ -31,7 +31,7 @@ struct Vector4f{
     inline Vector4f():x(0),y(0),z(0),w(1){}
     inline Vector4f(const Vector3f& v,float w):x(v.x),y(v.y),z(v.z),w(w){}
     inline Vector4f(const Vector3f& v):Vector4f(v,1){}
-   inline Vector4f(float x,float y,float z,float w):x(x),y(y),z(z),w(w){}
+    inline Vector4f(float x,float y,float z,float w):x(x),y(y),z(z),w(w){}
 };
 
 inline Vector3f::Vector3f(const Vector4f& v):x(v.x),y(v.y),z(v.z){}
@@ -138,6 +138,8 @@ inline Quaternionf& operator*= (Quaternionf& p,float s){
     return p;
 }
 
+struct Matrix4f;
+
 struct Matrix3f{
     float a[3][3];
      Matrix3f(){
@@ -163,14 +165,25 @@ struct Matrix3f{
         a[1][2] = 2*s*(p.v.y*p.v.z - p.s*p.v.x);
         a[2][1] = 2*s*(p.v.y*p.v.z + p.s*p.v.x);
     }
+    Matrix3f(const Matrix4f& m);
     Vector3f Transform(Vector3f v){
         return Vector3f(
                     a[0][0] * v.x + a[0][1] * v.y + a[0][2] * v.z,
                     a[1][0] * v.x + a[1][1] * v.y + a[1][2] * v.z,
                     a[2][0] * v.x + a[2][1] * v.y + a[2][2] * v.z);
     }
+
+    inline Matrix3f Transpose(){
+        Matrix3f res;
+        for(int i = 0;i<3;i++){
+            for(int j = 0;j<3;j++){
+                res.a[i][j] = a[j][i];
+            }
+        }
+        return res;
+    }
     
-    static Matrix3f Identity(){
+    static inline Matrix3f Identity(){
         Matrix3f result;
         for(int i = 0;i<3;i++){
             result.a[i][i] = 1;
@@ -182,11 +195,25 @@ struct Matrix3f{
 inline Matrix3f operator*(const Matrix3f& a,const Matrix3f& b){
     Matrix3f res;
     for(int i = 0;i<3;i++)
-        for(int j = 0;j<3;j++)
+        for(int j = 0;j<3;j++){
+            res.a[i][j] = 0;
             for(int k = 0;k<3;k++)
                 res.a[i][j] += a.a[i][k] * b.a[k][j];
+        }  
     return res;
 }
+
+/*
+FIXME:
+Defining this operator creates an ambiguity between Quaternionf * Vector3f and Matrix3f * Vector3f
+since Quaternionf can be implicitly constructed from Matrix3f.
+inline Vector3f operator*(const Matrix3f& a,const Vector3f& v){
+    return Vector3f(
+                    a.a[0][0] * v.x + a.a[0][1] * v.y + a.a[0][2] * v.z,
+                    a.a[1][0] * v.x + a.a[1][1] * v.y + a.a[1][2] * v.z,
+                    a.a[2][0] * v.x + a.a[2][1] * v.y + a.a[2][2] * v.z);
+}
+*/
 
 inline Matrix3f operator*(const float s,const Matrix3f& a){
     Matrix3f res;
@@ -211,12 +238,12 @@ struct Matrix4f{
             }
         }
         for(int i = 0;i<4;i++){
-            a[3][i] = 0;
+            a[3][i] = 0.0;
         }
         a[0][3] = v.x;
         a[1][3] = v.y;
         a[2][3] = v.z;
-        a[3][3] = 1;
+        a[3][3] = 1.0;
     }
     Vector4f Transform(Vector4f v){
         return Vector4f(
@@ -237,5 +264,20 @@ struct Matrix4f{
         return Vector3f(a[3][0],a[3][1],a[3][2]);
     }
 };
+
+inline Matrix4f operator*(const Matrix4f& a,const Matrix4f& b){
+    Matrix4f res;
+    for(int i = 0;i<4;i++)
+        for(int j = 0;j<4;j++)
+            for(int k = 0;k<4;k++)
+                res.a[i][j] += a.a[i][k] * b.a[k][j];
+    return res;
+}
+
+inline Matrix3f::Matrix3f(const Matrix4f& m){
+    for(int i = 0;i<3;i++)
+        for(int j = 0;j<3;j++)
+            this->a[i][j] = m.a[i][j];
+}
 
 #endif
