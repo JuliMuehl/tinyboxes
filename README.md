@@ -30,7 +30,7 @@ int main(){
     while(true){
         // Make a (euler) integration step with step size .01
         w.step(.01f); 
-        //Get the position and orientation of the bodies as 4x4 Matrices
+        //Get the positions and orientations of the bodies as 4x4 Matrices
         Matrix4f mat1 = w.BodyTransform(body1);
         Matrix4f mat2 = w.BodyTransform(body2);
         Matrix4f mat3 = w.BodyTransform(body3);
