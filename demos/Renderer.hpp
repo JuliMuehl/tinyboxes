@@ -353,8 +353,8 @@ struct Renderer{
         out vec2 fragXZ;
         uniform mat4 uProjection;
         uniform mat4 uView;
-        float width = 1000;
-        float height = 1000;
+        float width = 100;
+        float height = 100;
         void main(){
             vec2 dims = vec2(width,height);
             vec3 position = vec3(0.0);
