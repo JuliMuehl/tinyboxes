@@ -6,14 +6,7 @@
 
 #include <chrono>
 
-bool stepWorld = false;
 
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
-        stepWorld = !stepWorld;
-    }    
-}
 
 int main(int argc,char** argv){
     World w = World();
@@ -51,7 +44,6 @@ int main(int argc,char** argv){
     }
     auto* window = glfwCreateWindow(640,480,"Tinyboxes Visualization",nullptr,nullptr);
     glfwMakeContextCurrent(window);
-    glfwSetKeyCallback(window, keyCallback);
     if(glewInit()){
         std::cout << "Error initializing GLEW" << std::endl;
         return 1;
@@ -90,8 +82,12 @@ int main(int argc,char** argv){
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     bool processInput = true;
 
+    bool stepWorld = false;
+    double time = 0.0f;
+    bool pauseHold = false;
     while(!glfwWindowShouldClose(window)){
         auto start_time = std::chrono::system_clock::now();
+        
         if(stepWorld)
             w.step(0.01);
         Vector3f pos = w.GetPosition(ball2);
@@ -109,12 +105,19 @@ int main(int argc,char** argv){
         glViewport(0,0,width,height);
         if(processInput){
             cam.CursorCallback(xpos/width-0.5,ypos/height-0.5);
-            
             cam.KeyCallback(window);
             if(glfwGetKey(window,GLFW_KEY_ESCAPE) == GLFW_PRESS){
                 processInput = false;
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             }
+          if(glfwGetKey(window,GLFW_KEY_SPACE) == GLFW_PRESS){
+            if(!pauseHold){
+              stepWorld = !stepWorld;
+              pauseHold = true;
+            }
+          }else{
+            pauseHold = false;
+          }
         }
         if(!processInput && glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS){
             processInput = true;
@@ -125,6 +128,7 @@ int main(int argc,char** argv){
         auto end_time = std::chrono::system_clock::now();
         auto duration = (end_time-start_time);
         double fduration = std::chrono::duration<double>(duration).count();
+        time += fduration;
         std::cout << "Frame Per Second: " <<   1.0/fduration << "fps" << std::endl;
     }
 }
