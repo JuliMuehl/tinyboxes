@@ -6,7 +6,7 @@ TinyBoxes has no external dependencies despite OpenGL and GLFW which are only re
 
 ## Demos
 
-<video src = "WreckBallDemo.mp4" width=300 height=300>
+<video src = "./WreckingBallDemo.mp4" width=300 height=300>
 
 
 ## Usage
