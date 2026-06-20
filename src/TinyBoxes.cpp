@@ -38,26 +38,6 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
         const RigidBody& b = bodies[i];
         Vector3f support = b.x + b.theta.Rotate(b.collider->Support(b.theta.Conjugate().Rotate(-normal)));
         if(Dot(support,normal) <= d){
-            #ifdef POLYHEDRON_OPTIMIZATION
-            if(b.collider->GetType() == ColliderType::Polyhedron){
-                std::shared_ptr<ConvexPolyhedron> c = std::dynamic_pointer_cast<ConvexPolyhedron> (b.collider);
-                for(Vector3f v:c->GetVertices()){
-                    v = b.theta.Rotate(v) + b.x;
-                    float seperation = Dot(v,normal);
-                    if(seperation < 0){
-                        Contact contact;
-                        contact.point = v;
-                        contact.depth = -seperation;
-                        contact.normal = normal;
-                        contact.u1 = u1;
-                        contact.u2 = u2;
-                        contact.r1 = b.PointToLocal(contact.point);
-                        add_or_replace_contact(i,contact);
-                    }
-                }
-                continue;
-            }
-            #endif
             Contact contact;
             contact.point = support;
             contact.depth = Dot(support,normal);

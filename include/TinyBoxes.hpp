@@ -73,7 +73,7 @@ public:
     }
 private:
     static constexpr float BETA = 0.01;
-    static constexpr float MU = 0.25;
+    static constexpr float MU = 0.5;
     static constexpr float TOLLERANCE = 1e-4;
     std::map<std::pair<size_t,size_t>,std::list<Contact>> violations;
     std::map<std::pair<size_t,size_t>,int> last_contact;
