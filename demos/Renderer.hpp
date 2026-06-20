@@ -4,17 +4,15 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
-#include <string>
 #include <vector>
 #include <tuple>
 #include <memory>
 #include <cmath>
-#include <chrono>
 
 #define GLSL_VERSION "#version 330\n"
 #define SHADER_STRING(x) GLSL_VERSION #x
 
-GLint compileProgram(const char* vertexShaderSource,const char* fragmentShaderSource){
+static inline GLint compileProgram(const char* vertexShaderSource,const char* fragmentShaderSource){
     GLint vertexShader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexShader,1,&vertexShaderSource,nullptr);
     glCompileShader(vertexShader);
@@ -421,7 +419,7 @@ struct Renderer{
     );
 
     Renderer(){
-        float uvData[] = {
+        constexpr float uvData[] = {
             0.0,0.0,
             0.0,1.0,
             1.0,1.0,
@@ -515,59 +513,5 @@ struct Renderer{
 
     }
 };
-/*
-int main(){
-    if(!glfwInit()){
-        std::cout << "Error initializing GLFW" << std::endl;
-    }
-    auto* window = glfwCreateWindow(640,480,"Tinyboxes Visualization",nullptr,nullptr);
-    glfwMakeContextCurrent(window);
-    if(glewInit()){
-        std::cout << "Error initializing GLEW" << std::endl;
-    }
 
-    std::shared_ptr<Mesh> mesh = Mesh::CreateSphere(1.0);
-    std::vector<std::shared_ptr<Mesh>> meshes = {mesh};
-    std::vector<Matrix4f> poses = {Matrix4f::Identity()};
-    std::vector<Material> materials = {Material(Vector3f(0.0f,0.0f,0.0f),Vector3f(0.5f,0.0f,0.0f),Vector3f(0.7f,0.6f,0.6f ),Vector3f(0.0,0.0,0.0))};
-    poses[0].a[1][3] = 1.0;
-    auto renderer = Renderer();
-    
-    glClearColor(0.0,0.0,0.0,1.0);
-    glEnable(GL_DEPTH_TEST);
-
-    CameraController cam = CameraController(45.0,640.0/480.0,0.5,1000.0);
-
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    bool processInput = true;
-    while(!glfwWindowShouldClose(window)){
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-        renderer.Render(cam,meshes,materials,poses);
-        double xpos,ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
-        
-        int width,height;
-        glfwGetWindowSize(window,&width,&height);
-        cam.ResizeCallback(width,height);
-        glViewport(0,0,width,height);
-        if(processInput){
-            cam.CursorCallback(xpos/width-0.5,ypos/height-0.5);
-            
-            cam.KeyCallback(window);
-            if(glfwGetKey(window,GLFW_KEY_ESCAPE) == GLFW_PRESS){
-                std::cout << "ESCAPE PRESSED" << std::endl;
-                processInput = false;
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-            }
-        }
-        if(!processInput && glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS){
-            processInput = true;
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        }
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
-}
-*/
 #endif
