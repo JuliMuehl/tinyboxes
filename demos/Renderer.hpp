@@ -182,7 +182,8 @@ struct Mesh{
                 std::cout << "(" << u << " " << v << ")" << "\t" << "(" << u_ << " " << v_ << ")" << std::endl; 
                 Vector3f v1 = parameterization(u,v),v2 = parameterization(u_,v),v3=parameterization(u_,v_),v4=parameterization(u,v_);
                 Vector3f n1 = Cross(v1-v2,v1-v3), n2 = Cross(v1-v4,v1-v3);
-                n1 *= ((int)!std::signbit(Dot(n1,v1)) * 2 - 1) / n1.Norm();n2 *= ((int)!std::signbit(Dot(n2,v1)) * 2 - 1) / n2.Norm();
+                n1 *= ((int)!std::signbit(Dot(n1,v1)) * 2 - 1) / n1.Norm();
+                n2 *= ((int)!std::signbit(Dot(n2,v1)) * 2 - 1) / n2.Norm();
                 vertices.push_back(v1);vertices.push_back(v2);vertices.push_back(v3);
                 normals.push_back(n1);normals.push_back(n1);normals.push_back(n1);
                 faces.push_back({3*(2*faceCount + 0) + 0,3*(2*faceCount + 0) + 1,3*(2*faceCount + 0) + 2});

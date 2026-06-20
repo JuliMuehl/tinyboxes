@@ -14,7 +14,7 @@ int main(int argc,char** argv){
     std::vector<Vector3f> cv = {{-1,-1,1},{-1,1,1},{1,1,1},{1,-1,1},{-1,-1,-1},{-1,1,-1},{1,1,-1},{1,-1,-1}};
 
     std::shared_ptr<ConvexCollider> collider = std::make_shared<ConvexPolyhedron>(cv);
-    std::shared_ptr<ConvexCollider> collider_sphere = std::make_shared<SphereCollider>(1);
+    std::shared_ptr<ConvexCollider> collider_sphere = std::make_shared<SphereCollider>(1.0);
 
     constexpr float BOX_INVERSE_MASS = 1.0; 
     using BodyId = World::BodyId;
@@ -34,7 +34,7 @@ int main(int argc,char** argv){
     BodyId b34 = w.AddBody({Vector3f(-4.0,7.3,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
 
     BodyId ball1 = w.AddBody({Vector3f(3.0,8,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
-    BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(50,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider});
+    BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(50,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider_sphere});
 
     w.AddJoint(DistanceJoint(ball1,ball2,3));
 

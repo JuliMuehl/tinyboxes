@@ -108,7 +108,7 @@ static void expand_simplex(std::vector<SupportPoint>& simplex, const ConvexColli
 
 bool GJK(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2,Vector3f v) noexcept{
     constexpr float TOLERANCE = 1e-6;
-    constexpr unsigned int MAX_ITERATIONS = 1000;
+    constexpr unsigned int MAX_ITERATIONS = 256;
     int simplex_bits = 0;
     unsigned int iteration = 0;
     do{
@@ -263,8 +263,8 @@ private:
 };
 
 Contact EPA(const std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2) noexcept{
-    constexpr unsigned int MAX_ITERATIONS = 32;
-    constexpr float TOLERANCE = 1e-3;
+    constexpr unsigned int MAX_ITERATIONS = 64;
+    constexpr float TOLERANCE = 1e-6;
     auto polytope = ExpandingPolytope(simplex);
     Face face;
     unsigned int i = 0;
