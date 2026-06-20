@@ -1,5 +1,6 @@
 #ifndef COLLISION_HPP
 #define COLLISION_HPP
+#include <memory>
 #include <vector>
 #include <limits>
 
@@ -33,7 +34,7 @@ inline SupportPoint operator*(float s,const SupportPoint& p) noexcept {
 
 enum class ColliderType{Sphere,Polyhedron};
 
-class ConvexCollider{
+class ConvexCollider:std::enable_shared_from_this<ConvexCollider>{
 public:
     virtual Vector3f Support(const Vector3f&) const noexcept = 0;
     virtual float GetBoundingRadius() const noexcept = 0;

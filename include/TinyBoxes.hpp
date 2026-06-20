@@ -9,7 +9,6 @@
 #include "Math.hpp"
 #include "Collision.hpp"
 
-
 struct RigidBody{
     Vector3f x;
     Quaternionf theta;
