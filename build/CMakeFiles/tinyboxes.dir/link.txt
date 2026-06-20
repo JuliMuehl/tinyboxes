@@ -1,2 +1,0 @@
-/usr/bin/ar qc libtinyboxes.a CMakeFiles/tinyboxes.dir/src/TinyBoxes.cpp.o CMakeFiles/tinyboxes.dir/src/Collision.cpp.o
-/usr/bin/ranlib libtinyboxes.a

@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/juli/tinyboxes/build/cmake_install.cmake",
-		"/home/juli/tinyboxes/build/demos/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

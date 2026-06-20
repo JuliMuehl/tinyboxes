@@ -1,6 +1,0 @@
-/home/juli/tinyboxes/build/CMakeFiles/tinyboxes.dir
-/home/juli/tinyboxes/build/CMakeFiles/edit_cache.dir
-/home/juli/tinyboxes/build/CMakeFiles/rebuild_cache.dir
-/home/juli/tinyboxes/build/demos/CMakeFiles/WreckingBallDemo.dir
-/home/juli/tinyboxes/build/demos/CMakeFiles/edit_cache.dir
-/home/juli/tinyboxes/build/demos/CMakeFiles/rebuild_cache.dir
