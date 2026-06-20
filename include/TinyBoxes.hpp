@@ -34,7 +34,6 @@ struct RigidBody{
 
 class PlaneConstraint{
 public:
-    std::vector<std::pair<size_t,Contact>> contacts;
     inline PlaneConstraint(Vector3f normal,float d):normal(normal.Normalize()),d(d){
         if(normal.x != 0) u1 = Cross(normal,Vector3f(0,1,0)).Normalize();
         else u1 = Cross(normal,Vector3f(1,0,0)).Normalize();
@@ -50,11 +49,12 @@ public:
     }
 private:
     static constexpr float BETA = .01;
-    static constexpr float MU = .5;
+    static constexpr float MU = 0.5;
     static constexpr float TOLLERANCE = 1e-5;
     static constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
     Vector3f normal,u1,u2;
     float d;
+    std::vector<std::pair<size_t,Contact>> contacts;
     void ApplyImpulse(RigidBody& body,Contact contact,float dt);
 };
 
@@ -72,12 +72,12 @@ public:
         }
     }
 private:
-    static constexpr float BETA = .1;
-    static constexpr float MU = 0.5;
+    static constexpr float BETA = 0.01;
+    static constexpr float MU = 0.25;
     static constexpr float TOLLERANCE = 1e-4;
     std::map<std::pair<size_t,size_t>,std::list<Contact>> violations;
     std::map<std::pair<size_t,size_t>,int> last_contact;
-    static constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
+    static constexpr float CONTACT_POINT_TOLLERANCE = 1e-3;
     void ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact& contact,float dt);
 };
 
@@ -104,7 +104,7 @@ private:
 
 class World{
 private:
-    static constexpr int GAUSS_SEIDEL_ITERATIONS = 100;
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 200;
     std::vector<RigidBody> bodies;
     std::vector<DistanceJoint> distanceJoints;
     Vector3f g;

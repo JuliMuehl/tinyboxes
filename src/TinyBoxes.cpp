@@ -1,24 +1,29 @@
 #include "TinyBoxes.hpp"
+#include "Math.hpp"
 #include <algorithm>
 
 void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
-    //contacts.clear();
-    constexpr float MAX_POINT_ERROR = 1e-2;
     for(auto it = contacts.begin();it != contacts.end();){
         auto& body = bodies[(*it).first];
         auto& contact = (*it).second;
-        if((contact.point - body.PointToGlobal(contact.r1)).NormSquared() > 0.25 * CONTACT_POINT_TOLLERANCE){
+        auto p = body.PointToGlobal(contact.r1);
+        
+        bool movedAway = (contact.point - p).Norm() > CONTACT_POINT_TOLLERANCE;
+        bool inactive = Dot(p, normal) > d + CONTACT_POINT_TOLLERANCE;
+        if(movedAway || inactive){
             it = contacts.erase(it);
         }else{
             it++;
         }
     }
-    auto add_or_replace_contact = [this](size_t id,auto& contact){
+    auto add_or_replace_contact = [this](size_t id, Contact& contact){
         bool replaced = false;
+        int idCount = 0;
         for(auto& pair : contacts){
+            idCount++;
             if(pair.first == id){
-                auto& c = pair.second;
-                if((c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE){
+                Contact& c = pair.second;
+                if((c.point - contact.point).Norm() <= CONTACT_POINT_TOLLERANCE){
                     c = contact;
                     replaced = true;
                     break;
@@ -33,6 +38,7 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
         const RigidBody& b = bodies[i];
         Vector3f support = b.x + b.theta.Rotate(b.collider->Support(b.theta.Conjugate().Rotate(-normal)));
         if(Dot(support,normal) <= d){
+            #ifdef POLYHEDRON_OPTIMIZATION
             if(b.collider->GetType() == ColliderType::Polyhedron){
                 std::shared_ptr<ConvexPolyhedron> c = std::dynamic_pointer_cast<ConvexPolyhedron> (b.collider);
                 for(Vector3f v:c->GetVertices()){
@@ -49,15 +55,17 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                         add_or_replace_contact(i,contact);
                     }
                 }
-            }else{
-                Contact contact;
-                contact.point = support;
-                contact.depth = Dot(support,normal);
-                contact.normal = normal;
-                contact.u1 = u1;
-                contact.u2 = u2;
-                add_or_replace_contact(i,contact);
+                continue;
             }
+            #endif
+            Contact contact;
+            contact.point = support;
+            contact.depth = Dot(support,normal);
+            contact.normal = normal;
+            contact.u1 = u1;
+            contact.u2 = u2;
+            contact.r1 = b.PointToLocal(contact.point);
+            add_or_replace_contact(i,contact);
         }
     }
 }
@@ -107,7 +115,6 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                 auto c2 = AffineTransformCollider(b2.x,b2.theta,*b2.collider);
                 
                 if(gjk(simplex,c1,c2)){
-                    //last_contact[key] = 0;
                     collisionFound = true;
                     auto contact = EPA(simplex,c1,c2);
                     if(std::isnan(contact.depth)) continue;
@@ -124,7 +131,8 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                     
                     for(Contact& c:contacts){
                         float dot = Dot(c.normal,contact.normal);
-                        if((c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE ){
+                        auto p = 0.5 * (b1.PointToGlobal(c.r1) + b2.PointToGlobal(c.r2));
+                        if((c.point - contact.point).Norm() <= CONTACT_POINT_TOLLERANCE){
                             c = contact;
                             replacedContact = true;
                             break;
@@ -142,7 +150,12 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
         auto& contacts = entry.second;
         for(auto it = contacts.begin();it != contacts.end();){
             const Contact& c = *it;
-            if((b1.PointToGlobal(c.r1) - b2.PointToGlobal(c.r2)).NormSquared() > 0.25*CONTACT_POINT_TOLLERANCE){
+            auto p1 = b1.PointToGlobal(c.r1);
+            auto p2 = b2.PointToGlobal(c.r2);
+            bool movedAway1 = (c.point - p1).Norm() > CONTACT_POINT_TOLLERANCE;
+            bool movedAway2 = (c.point - p2).Norm() > CONTACT_POINT_TOLLERANCE;
+            bool inactive = Dot(p1 - p2, c.normal) > CONTACT_POINT_TOLLERANCE;
+            if(movedAway1 || movedAway2 || inactive){
                 it = contacts.erase(it);
             }else{
                 it++;
@@ -167,24 +180,25 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact
     Vector3f v1 = b1.v + Cross(r1,b1.omega);
     Vector3f v2 = b2.v + Cross(r2,b2.omega);
     Vector3f vrel = v1 - v2;
-
-    float lambda_n =(BETA * C/dt  + Dot(contact.normal,vrel)) / K_n;
-    lambda_n = std::max(lambda_n,0.0f);
-
+   
+    float lambda_n = (BETA * C/dt  + Dot(contact.normal,vrel)) / K_n;
+    lambda_n = std::fmax(lambda_n, 0.0);
     Vector3f J_v_u1 = contact.u1;
     Vector3f J_omega1_u1 = -Cross(r1,contact.u1);
     Vector3f J_omega2_u1 = -Cross(r2,contact.u1);
     float K_u1 = b1.inverseMass + b2.inverseMass + Dot(J_omega1_u1,invI1.Transform(J_omega1_u1)) + Dot(J_omega2_u1,invI2.Transform(J_omega2_u1));
-    float lambda_u1 = (Dot(J_v_u1,b1.v-b2.v) + Dot(J_omega1_u1,b1.omega) - Dot(J_omega2_u1,b2.omega))/K_u1;
-    lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
-
+    
     Vector3f J_v_u2 = contact.u2;
     Vector3f J_omega1_u2 = Cross(contact.u2,r1);
     Vector3f J_omega2_u2 = Cross(contact.u2,r2);
     float K_u2 = b1.inverseMass + b2.inverseMass + Dot(J_omega1_u2,invI1.Transform(J_omega1_u2)) + Dot(J_omega2_u2,invI2.Transform(J_omega2_u2));
-    float lambda_u2 = (Dot(J_v_u2,b1.v-b2.v) + Dot(J_omega1_u2,b1.omega) -Dot(J_omega2_u2,b2.omega))/K_u2;
-    lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+    
     if(K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE && K_n >= TOLLERANCE){
+        float lambda_u1 = (Dot(J_v_u1,b1.v-b2.v) + Dot(J_omega1_u1,b1.omega) - Dot(J_omega2_u1,b2.omega))/K_u1;
+        lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+        float lambda_u2 = (Dot(J_v_u2,b1.v-b2.v) + Dot(J_omega1_u2,b1.omega) -Dot(J_omega2_u2,b2.omega))/K_u2;
+        lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+
         b1.v += -b1.inverseMass*(lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
         b2.v += b2.inverseMass*(lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
         b1.omega += -invI1.Transform(lambda_n * J_omega1_n + lambda_u1 * J_omega1_u1 + lambda_u2 * J_omega1_u2);

@@ -106,7 +106,7 @@ static void expand_simplex(std::vector<SupportPoint>& simplex, const ConvexColli
     }
 }
 
-bool gjk(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2,Vector3f v) noexcept{
+bool gjk(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2, Vector3f v) noexcept{
     constexpr float TOLERANCE = 1e-6;
     constexpr unsigned int MAX_ITERATIONS = 1000;
     int simplex_bits = 0;
