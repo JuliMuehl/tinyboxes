@@ -2,11 +2,17 @@
 #define COLLISION_HPP
 #include <vector>
 #include <limits>
-#include <memory>
 
 
 #include "Math.hpp"
-#include "Contact.hpp"
+
+struct Contact{
+    float depth;
+    Vector3f normal,u1,u2;
+    Vector3f point;
+    Vector3f r1,r2;
+    unsigned int age = 0;
+};
 
 struct SupportPoint {
     Vector3f a;
@@ -27,14 +33,15 @@ inline SupportPoint operator*(float s,const SupportPoint& p) noexcept {
 
 enum class ColliderType{Sphere,Polyhedron};
 
-struct ConvexCollider{
+class ConvexCollider{
+public:
     virtual Vector3f Support(const Vector3f&) const noexcept = 0;
     virtual float GetBoundingRadius() const noexcept = 0;
     virtual ColliderType GetType() const noexcept = 0;
 };
 
-struct SphereCollider:public ConvexCollider{
-    float radius;
+class SphereCollider:public ConvexCollider{
+public:
     SphereCollider(float radius):radius(radius){}
     Vector3f Support(const Vector3f& direction) const noexcept override{
         return (radius/direction.Norm())*direction;
@@ -45,11 +52,12 @@ struct SphereCollider:public ConvexCollider{
     ColliderType GetType() const noexcept override{
         return ColliderType::Sphere;
     }
+private:
+    float radius;
 };
 
-struct ConvexPolyhedron:public ConvexCollider{
-    std::vector<Vector3f> vertices;
-    float radius;
+class ConvexPolyhedron:public ConvexCollider{
+public:
     ConvexPolyhedron(std::vector<Vector3f> vertices):vertices(vertices){
         radius = 0;
         for(auto& vertex:vertices){
@@ -74,13 +82,17 @@ struct ConvexPolyhedron:public ConvexCollider{
     ColliderType GetType() const noexcept override{
         return ColliderType::Polyhedron;
     }
+    const std::vector<Vector3f>& GetVertices(){
+        return vertices;
+    }
+private:
+    std::vector<Vector3f> vertices;
+    float radius;
 };
 
 
-struct AffineTransformCollider:public ConvexCollider{
-    Quaternionf orientation;
-    Vector3f position;
-    const ConvexCollider& collider;
+class AffineTransformCollider:public ConvexCollider{
+public:
     AffineTransformCollider(const Vector3f& position,const Quaternionf& orientation,const ConvexCollider&  collider):position(position),orientation(orientation),collider(collider){}
     Vector3f Support(const Vector3f& direction) const noexcept override{
         return orientation.Rotate(collider.Support(orientation.Conjugate().Rotate(direction))) + position;
@@ -91,6 +103,10 @@ struct AffineTransformCollider:public ConvexCollider{
     ColliderType GetType() const noexcept override{
         return collider.GetType();
     }
+private:
+    Quaternionf orientation;
+    Vector3f position;
+    const ConvexCollider& collider;
 };
 
 

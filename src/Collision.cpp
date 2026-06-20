@@ -1,4 +1,6 @@
 #include "Collision.hpp"
+#include "Math.hpp"
+
 #include <array>
 #include <cassert>
 #include <tuple>

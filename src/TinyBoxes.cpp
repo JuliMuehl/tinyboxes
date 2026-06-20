@@ -1,6 +1,4 @@
 #include "TinyBoxes.hpp"
-#include <cstdio>
-#include <iostream>
 
 template<typename T>
 static T Clamp(const T& x,const T& lower,const T& upper){
@@ -10,6 +8,7 @@ static T Clamp(const T& x,const T& lower,const T& upper){
         return lower;
     return x;
 }
+
 void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
     //contacts.clear();
     constexpr float MAX_POINT_ERROR = 1e-2;
@@ -44,7 +43,7 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
         if(Dot(support,normal) <= d){
             if(b.collider->GetType() == ColliderType::Polyhedron){
                 std::shared_ptr<ConvexPolyhedron> c = std::dynamic_pointer_cast<ConvexPolyhedron> (b.collider);
-                for(Vector3f v:c->vertices){
+                for(Vector3f v:c->GetVertices()){
                     v = b.theta.Rotate(v) + b.x;
                     float seperation = Dot(v,normal);
                     if(seperation < 0){
@@ -56,7 +55,6 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                         contact.u2 = u2;
                         contact.r1 = b.PointToLocal(contact.point);
                         add_or_replace_contact(i,contact);
-                        //contacts.push_back(std::make_pair(i,contact));
                     }
                 }
             }else{
@@ -67,7 +65,6 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                 contact.u1 = u1;
                 contact.u2 = u2;
                 add_or_replace_contact(i,contact);
-                //contacts.push_back(std::make_pair(i,contact));
             }
         }
     }
@@ -128,19 +125,13 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                     if(b1.collider->GetType() != ColliderType::Polyhedron || b2.collider->GetType() != ColliderType::Polyhedron) {
                         contacts.clear();
                         contacts.push_back(contact);
-                        //last_contact[key] = 0;
                         continue;
                     }
-                    //bool isResting = (b1.GetVelocityAtPoint(contact.point) - b2.GetVelocityAtPoint(contact.point)).NormSquared() <= RESTING_VELOCITY;
-                    //if(!isResting){
-                        //contacts.clear();
-                    //}
+
                     bool replacedContact = false;
                     
                     for(Contact& c:contacts){
                         float dot = Dot(c.normal,contact.normal);
-                        //(1 - dot * dot) <= CONTACT_NORMAL_TOLLERANCE && 
-                        //fabs(contact.depth - c.depth) <= CONTACT_DEPTH_TOLLERANCE 
                         if((c.point - contact.point).NormSquared() <= CONTACT_POINT_TOLLERANCE ){
                             c = contact;
                             replacedContact = true;
@@ -148,15 +139,9 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                         }
                     }
 
-                    //contacts.erase(std::remove_if(contacts.begin(),contacts.end(),[&contact,b1,b2](auto c){return c.age>=CONTACT_EXPIRATION;}),contacts.end());
-                    //for(Contact& c:contacts){
-                        //c.age++;
-                    //}
-                    
                     if(!replacedContact) contacts.push_back(contact);
                 }
             }
-            //if(last_contact[key]++ >= 5) violations[key].clear();
         }
     }
     for(auto& entry : violations){
@@ -191,7 +176,7 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact
     Vector3f v2 = b2.v + Cross(r2,b2.omega);
     Vector3f vrel = v1 - v2;
 
-    float lambda_n =(BETA * C/dt  + Dot(contact.normal,vrel)) / K_n;//(BETA * C / dt + Dot(contact.normal,vrel)) / K_n;
+    float lambda_n =(BETA * C/dt  + Dot(contact.normal,vrel)) / K_n;
     lambda_n = std::max(lambda_n,0.0f);
 
     Vector3f J_v_u1 = contact.u1;

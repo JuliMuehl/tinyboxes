@@ -17,7 +17,7 @@ int main(int argc,char** argv){
     std::shared_ptr<ConvexCollider> collider_sphere = std::make_shared<SphereCollider>(1);
 
     constexpr float BOX_INVERSE_MASS = 1.0; 
-    
+    using BodyId = World::BodyId;
     BodyId b11 = w.AddBody({Vector3f(0,1.0,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
     BodyId b12 = w.AddBody({Vector3f(0,3.1,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});
     BodyId b13 = w.AddBody({Vector3f(0,5.2,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), BOX_INVERSE_MASS * Matrix3f::Identity(),BOX_INVERSE_MASS,collider});

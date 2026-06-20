@@ -1,7 +1,7 @@
 #ifndef MATH_HPP
 #define MATH_HPP
 
-#include <cmath>
+#include <math.h>
 
 struct Vector4f;
 
@@ -206,7 +206,7 @@ inline Matrix3f operator*(const Matrix3f& a,const Matrix3f& b){
 /*
 FIXME:
 Defining this operator creates an ambiguity between Quaternionf * Vector3f and Matrix3f * Vector3f
-since Quaternionf can be implicitly constructed from Matrix3f.
+since Matrix3f can be implicitly constructed from Quaternionf.
 inline Vector3f operator*(const Matrix3f& a,const Vector3f& v){
     return Vector3f(
                     a.a[0][0] * v.x + a.a[0][1] * v.y + a.a[0][2] * v.z,
