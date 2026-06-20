@@ -11,7 +11,6 @@ struct Contact{
     Vector3f normal,u1,u2;
     Vector3f point;
     Vector3f r1,r2;
-    unsigned int age = 0;
 };
 
 struct SupportPoint {
@@ -110,7 +109,7 @@ private:
 };
 
 
-bool gjk(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2,Vector3f v = Vector3f(1,0,0)) noexcept;
+bool GJK(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2,Vector3f v = Vector3f(1,0,0)) noexcept;
 
 Contact EPA(const std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2) noexcept;
     

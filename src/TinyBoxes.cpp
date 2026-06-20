@@ -114,7 +114,7 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                 auto c1 = AffineTransformCollider(b1.x,b1.theta,*b1.collider);
                 auto c2 = AffineTransformCollider(b2.x,b2.theta,*b2.collider);
                 
-                if(gjk(simplex,c1,c2)){
+                if(GJK(simplex,c1,c2)){
                     collisionFound = true;
                     auto contact = EPA(simplex,c1,c2);
                     if(std::isnan(contact.depth)) continue;
