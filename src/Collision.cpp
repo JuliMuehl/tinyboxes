@@ -4,9 +4,7 @@
 #include <array>
 #include <cassert>
 #include <tuple>
-#include <unordered_set>
-#include <set>
-
+#include <algorithm>
 
 static float dp[4][4];
 static float memo[16][4];
@@ -147,23 +145,6 @@ struct Face : public std::tuple<size_t, size_t, size_t> {
     }
 };
 
-template<> struct std::hash<Face>{
-    size_t operator() (const Face& face) const noexcept{
-        size_t h0 = std::hash<size_t>{}(std::get<0>(face));
-        size_t h1 = std::hash<size_t>{}(std::get<1>(face));
-        size_t h2 = std::hash<size_t>{}(std::get<2>(face));
-        return h0 ^ (h1 << 1) ^ (h2 << 2);
-    }
-};
-
-template<> struct std::hash<Edge>{
-    size_t operator() (const Edge& edge) const noexcept{
-        size_t h0 = std::hash<size_t>{}(edge.first);
-        size_t h1 = std::hash<size_t>{}(edge.second);
-        return h0 ^ (h1 << 1);
-    }
-};
-
 template<typename T>
 struct ArraySet{
 public:
@@ -185,38 +166,18 @@ public:
     iterator_type end(){
         return arr.end();
     }
+    iterator_type find(const T& elem){
+        return std::find(begin(), end(), elem);
+    }
 private:
     std::vector<T> arr;
 };
 
-struct ExpandingPolytope {
-private:
-    std::vector<SupportPoint> vertices;
-    //std::unordered_set<Face> faces;
-    using Set = ArraySet<Face>;
-    Set faces;
-    inline Vector3f Normal(size_t i, size_t j, size_t k) noexcept{
-        Vector3f n = Cross((vertices[j].x - vertices[i].x),(vertices[k].x - vertices[i].x));
-        n = (1 / n.Norm()) * n;
-        float distance = Dot(n,vertices[i].x);
-        if (distance < 0) n = (-1) * n;
-        else if (distance == 0) {
-            for (auto& f : faces) {
-                if (Dot(f.normal,n) > 0) {
-                    n = (-1) * n;
-                }
-            }
-        }
-        return n;
-    }
-
-    inline Face MakeFace(size_t i, size_t j, size_t k) noexcept{
-        return { i,j,k,Normal(i,j,k) };
-    }
+class ExpandingPolytope {
 public:
     void InsertVertex(SupportPoint point) noexcept{
         vertices.push_back(point);
-        std::unordered_set<Edge> horizon;
+        ArraySet<Edge> horizon;
         for (auto it = faces.begin(); it != faces.end();) {
             const Face& face = *it;
             if (Dot(face.normal,point.x - vertices[std::get<0>(face)].x) >= 0) {
@@ -276,6 +237,28 @@ public:
     ExpandingPolytope(const std::vector<SupportPoint>& simplex) : vertices(simplex) {
         assert(simplex.size() == 4);
         faces = Set({ MakeFace(1,2,0) ,MakeFace(3,2,1) ,MakeFace(0,3,1) ,MakeFace(2,3,0) });
+    }
+private:
+    std::vector<SupportPoint> vertices;
+    using Set = ArraySet<Face>;
+    Set faces;
+    inline Vector3f Normal(size_t i, size_t j, size_t k) noexcept{
+        Vector3f n = Cross((vertices[j].x - vertices[i].x),(vertices[k].x - vertices[i].x));
+        n = (1 / n.Norm()) * n;
+        float distance = Dot(n,vertices[i].x);
+        if (distance < 0) n = (-1) * n;
+        else if (distance == 0) {
+            for (auto& f : faces) {
+                if (Dot(f.normal,n) > 0) {
+                    n = (-1) * n;
+                }
+            }
+        }
+        return n;
+    }
+
+    inline Face MakeFace(size_t i, size_t j, size_t k) noexcept{
+        return { i,j,k,Normal(i,j,k) };
     }
 };
 
