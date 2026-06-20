@@ -4,7 +4,6 @@
 #include <vector>
 #include <limits>
 
-
 #include "Math.hpp"
 
 struct Contact{

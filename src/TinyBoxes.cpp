@@ -1,13 +1,5 @@
 #include "TinyBoxes.hpp"
-
-template<typename T>
-static T Clamp(const T& x,const T& lower,const T& upper){
-    if(x >= upper)
-        return upper; 
-    if(x <= lower)
-        return lower;
-    return x;
-}
+#include <algorithm>
 
 void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
     //contacts.clear();
@@ -93,8 +85,8 @@ void PlaneConstraint::ApplyImpulse(RigidBody& body,Contact contact,float dt){
     float K_u2 = Dot(J_omega_u2,invI.Transform(J_omega_u2)) + body.inverseMass;
     float lambda_u1 = -(Dot(J_omega_u1,body.omega) + Dot(body.v,J_v_u1))/K_u1;
     float lambda_u2 = -(Dot(J_omega_u2,body.omega) + Dot(body.v,J_v_u2))/K_u1;
-    lambda_u1 = Clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
-    lambda_u2 = Clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+    lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+    lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
     if(K_n >= TOLLERANCE && K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE){
         body.v += body.inverseMass * (lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
         body.omega += invI.Transform(lambda_n * J_omega_n + lambda_u1*J_omega_u1 + lambda_u2*J_omega_u2);
@@ -184,14 +176,14 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact
     Vector3f J_omega2_u1 = -Cross(r2,contact.u1);
     float K_u1 = b1.inverseMass + b2.inverseMass + Dot(J_omega1_u1,invI1.Transform(J_omega1_u1)) + Dot(J_omega2_u1,invI2.Transform(J_omega2_u1));
     float lambda_u1 = (Dot(J_v_u1,b1.v-b2.v) + Dot(J_omega1_u1,b1.omega) - Dot(J_omega2_u1,b2.omega))/K_u1;
-    lambda_u1 = Clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+    lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
 
     Vector3f J_v_u2 = contact.u2;
     Vector3f J_omega1_u2 = Cross(contact.u2,r1);
     Vector3f J_omega2_u2 = Cross(contact.u2,r2);
     float K_u2 = b1.inverseMass + b2.inverseMass + Dot(J_omega1_u2,invI1.Transform(J_omega1_u2)) + Dot(J_omega2_u2,invI2.Transform(J_omega2_u2));
     float lambda_u2 = (Dot(J_v_u2,b1.v-b2.v) + Dot(J_omega1_u2,b1.omega) -Dot(J_omega2_u2,b2.omega))/K_u2;
-    lambda_u2 = Clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+    lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
     if(K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE && K_n >= TOLLERANCE){
         b1.v += -b1.inverseMass*(lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
         b2.v += b2.inverseMass*(lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
