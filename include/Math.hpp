@@ -142,13 +142,27 @@ struct Matrix4f;
 
 struct Matrix3f{
     float a[3][3];
-     Matrix3f(){
+
+    Matrix3f(){
         for(int i = 0;i<3;i++){
             for(int j = 0;j<3;j++){
                 a[i][j] = 0;
             }
         }
     }
+
+    Matrix3f(const Vector3f& col1,const Vector3f& col2,const Vector3f& col3){
+        a[0][0] = col1.x;
+        a[0][1] = col1.y;
+        a[0][2] = col1.z;
+        a[1][0] = col2.x;
+        a[1][1] = col2.y;
+        a[1][2] = col2.z;
+        a[2][0] = col3.x;
+        a[2][1] = col3.y;
+        a[2][2] = col3.z;
+    }
+
     Matrix3f(Quaternionf p){
         float s = 1/p.Norm();
         s *= s;
@@ -165,7 +179,9 @@ struct Matrix3f{
         a[1][2] = 2*s*(p.v.y*p.v.z - p.s*p.v.x);
         a[2][1] = 2*s*(p.v.y*p.v.z + p.s*p.v.x);
     }
+
     Matrix3f(const Matrix4f& m);
+
     Vector3f Transform(Vector3f v){
         return Vector3f(
                     a[0][0] * v.x + a[0][1] * v.y + a[0][2] * v.z,
@@ -202,18 +218,6 @@ inline Matrix3f operator*(const Matrix3f& a,const Matrix3f& b){
         }  
     return res;
 }
-
-/*
-FIXME:
-Defining this operator creates an ambiguity between Quaternionf * Vector3f and Matrix3f * Vector3f
-since Matrix3f can be implicitly constructed from Quaternionf.
-inline Vector3f operator*(const Matrix3f& a,const Vector3f& v){
-    return Vector3f(
-                    a.a[0][0] * v.x + a.a[0][1] * v.y + a.a[0][2] * v.z,
-                    a.a[1][0] * v.x + a.a[1][1] * v.y + a.a[1][2] * v.z,
-                    a.a[2][0] * v.x + a.a[2][1] * v.y + a.a[2][2] * v.z);
-}
-*/
 
 inline Matrix3f operator*(const float s,const Matrix3f& a){
     Matrix3f res;
@@ -252,6 +256,13 @@ struct Matrix4f{
                     a[2][0] * v.x + a[2][1] * v.y + a[2][2] * v.z + a[2][3]* v.w,
                     a[3][0] * v.x + a[3][1] * v.y + a[3][2] * v.z + a[3][3]* v.w);
     }
+    Matrix4f Transpose(){
+        Matrix4f res;
+        for(int i = 0;i<4;i++)
+            for(int j = 0;j<4;j++)
+                res.a[j][i] = a[i][j];
+        return res;
+    }
     static Matrix4f Identity(){
         Matrix4f m;
         for(int i = 0;i<4;i++){
@@ -260,9 +271,6 @@ struct Matrix4f{
         return m;
     }
 
-    inline Vector3f Translation() const{
-        return Vector3f(a[3][0],a[3][1],a[3][2]);
-    }
 };
 
 inline Matrix4f operator*(const Matrix4f& a,const Matrix4f& b){

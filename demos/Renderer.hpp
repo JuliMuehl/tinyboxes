@@ -4,6 +4,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <ostream>
+#include <stdexcept>
 #include <vector>
 #include <tuple>
 #include <memory>
@@ -23,8 +25,7 @@ static inline GLint compileProgram(const char* vertexShaderSource,const char* fr
         glGetShaderiv(vertexShader,GL_INFO_LOG_LENGTH,&length);
         char* infoLog = new char[length];
         glGetShaderInfoLog(vertexShader,length,nullptr,infoLog);
-        std::cout << "Error compiling vertex shader:" << std::endl 
-            << infoLog << std::endl;
+        throw std::runtime_error("Error compiling vertex shader:\n" +  std::string(infoLog) + "\n");
         delete[] infoLog;
     }
     GLint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -36,8 +37,8 @@ static inline GLint compileProgram(const char* vertexShaderSource,const char* fr
         glGetShaderiv(fragmentShader,GL_INFO_LOG_LENGTH,&length);
         char* infoLog = new char[length];
         glGetShaderInfoLog(fragmentShader,length,nullptr,infoLog);
-        std::cout << "Error compiling fragment shader:" << std::endl 
-            << infoLog << std::endl;
+
+        throw std::runtime_error("Error compiling fragment shader:\n" +  std::string(infoLog) + "\n");
         delete[] infoLog;
     }
     GLint program = glCreateProgram();
@@ -50,8 +51,9 @@ static inline GLint compileProgram(const char* vertexShaderSource,const char* fr
         glGetProgramiv(program,GL_INFO_LOG_LENGTH,&length);
         char* infoLog = new char[length];
         glGetProgramInfoLog(program,length,nullptr,infoLog);
-        std::cout << "Error linking program:" << std::endl 
-            << infoLog << std::endl;
+
+        throw std::runtime_error("Error linking program:\n" +  std::string(infoLog) + "\n");
+
         delete[] infoLog;
     }
     glDeleteShader(vertexShader);
@@ -276,20 +278,171 @@ struct CameraController{
     }
 };
 
+class Renderer{
+public:
+    Renderer(){
+        constexpr float uvData[] = {
+            0.0,0.0,
+            0.0,1.0,
+            1.0,1.0,
+            0.0,0.0,
+            1.0,0.0,
+            1.0,1.0
+        };
+        glGenBuffers(1,&uvBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
+        glBufferData(GL_ARRAY_BUFFER,sizeof(uvData),&uvData[0],GL_STATIC_DRAW);
 
+        atmosphere_program = compileProgram(atmosphere_vertexShaderSource,atmosphere_fragmentShaderSource);
+        atmosphere_inUVLocation = glGetAttribLocation(atmosphere_program,"inUV");
+        atmosphere_uProjectionLocation = glGetUniformLocation(atmosphere_program,"uProjection");
+        atmosphere_uViewLocation = glGetUniformLocation(atmosphere_program,"uView");
+        atmosphere_uSunDirectionLocation = glGetUniformLocation(atmosphere_program,"uSunDirection");
 
-struct Renderer{
+        floor_program = compileProgram(floor_vertexShaderSource,floor_fragmentShaderSource);
+        floor_inUVLocation = glGetAttribLocation(floor_program,"inUV");
+        
+        floor_uProjectionLocation = glGetUniformLocation(floor_program,"uProjection");
+        floor_uViewLocation = glGetUniformLocation(floor_program,"uView");
+        floor_uSMViewProjection = glGetUniformLocation(floor_program, "uSMViewProjection");
+
+        mesh_program = compileProgram(mesh_vertexShaderSource,mesh_fragmentShaderSource);
+        mesh_inPositionLocation = glGetAttribLocation(mesh_program,"inPosition");
+        mesh_inNormalLocation = glGetAttribLocation(mesh_program,"inNormal");
+        mesh_uModelLocation = glGetUniformLocation(mesh_program,"uModel");
+        mesh_uViewLocation = glGetUniformLocation(mesh_program,"uView");
+        mesh_uProjectionLocation = glGetUniformLocation(mesh_program,"uProjection");
+        mesh_uAmbientLocation = glGetUniformLocation(mesh_program,"uAmbient");
+        mesh_uDiffuseLocation = glGetUniformLocation(mesh_program,"uDiffuse");
+        mesh_uSpecularLocation = glGetUniformLocation(mesh_program,"uSpecular");
+        mesh_uEmissionLocation = glGetUniformLocation(mesh_program,"uEmission");
+        mesh_uSunDirectionLocation = glGetUniformLocation(mesh_program,"uSunDirection");
+        mesh_uSMViewProjection = glGetUniformLocation(mesh_program, "uSMViewProjection");
+
+        glGenTextures(1, &shadowmap_depthTexture);
+        glBindTexture(GL_TEXTURE_2D, shadowmap_depthTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, shadowmap_width, shadowmap_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        // Set border color to maximum depth (prevents sampling artifacts outside bounds)
+        float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        glGenTextures(1, &shadowmap_colorTexture);
+        glBindTexture(GL_TEXTURE_2D, shadowmap_colorTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, shadowmap_width, shadowmap_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        glGenFramebuffers(1, &shadowmap_fbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowmap_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowmap_depthTexture, 0);
+        
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowmap_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadowmap_colorTexture, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void Render(const Matrix4f& view, 
+                const Matrix4f& projection,
+                const std::vector<std::shared_ptr<Mesh>>& meshes,
+                const std::vector<Material>& materials,
+                const std::vector<Matrix4f>& poses,
+                const Matrix4f& smViewProjection){
+        //Render Atmosphere
+        glUseProgram(atmosphere_program);
+        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
+        glEnableVertexAttribArray(atmosphere_inUVLocation);
+        glVertexAttribPointer(atmosphere_inUVLocation,2,GL_FLOAT,GL_FALSE,0,nullptr);
+        glUniformMatrix4fv(atmosphere_uProjectionLocation,1,GL_TRUE,&projection.a[0][0]);
+        glUniformMatrix4fv(atmosphere_uViewLocation,1,GL_TRUE,&view.a[0][0]);
+        glUniform3f(atmosphere_uSunDirectionLocation,sunDirection.x,sunDirection.y,sunDirection.z);
+        glDrawArrays(GL_TRIANGLES,0,6);
+        //Atmosphere is infinitely far away from the camera.
+        //We just clear the depth buffer such that everything else is drawn on top.
+        glClear(GL_DEPTH_BUFFER_BIT);
+      
+        
+        //Render Ground Plane (Floor)
+        glUseProgram(floor_program);
+        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
+        glEnableVertexAttribArray(floor_inUVLocation);
+        glVertexAttribPointer(floor_inUVLocation,2,GL_FLOAT,GL_FALSE,0,nullptr);
+        glUniformMatrix4fv(floor_uProjectionLocation,1,GL_TRUE, &projection.a[0][0]);
+        glUniformMatrix4fv(floor_uViewLocation,1,GL_TRUE, &view.a[0][0]);
+        glUniformMatrix4fv(floor_uSMViewProjection, 1, GL_TRUE, &smViewProjection.a[0][0]);
+        glDrawArrays(GL_TRIANGLES,0,6);       
+
+        //Render Meshes
+        glUseProgram(mesh_program);
+        glUniformMatrix4fv(mesh_uSMViewProjection, 1, GL_TRUE, &smViewProjection.a[0][0]);
+        for(int i = 0;i<meshes.size();i++){
+            const auto& mesh = meshes[i];
+            const auto& pose = poses[i];
+            const auto& mat = materials[i];
+            
+            glUniformMatrix4fv(mesh_uViewLocation,1,GL_TRUE,&view.a[0][0]);
+            glUniformMatrix4fv(mesh_uProjectionLocation,1,GL_TRUE,&projection.a[0][0]);
+            glUniformMatrix4fv(mesh_uModelLocation,1,GL_TRUE,&pose.a[0][0]);
+            glUniform3f(mesh_uAmbientLocation,mat.ambient.x,mat.ambient.y,mat.ambient.z);
+            glUniform3f(mesh_uDiffuseLocation,mat.diffuse.x,mat.diffuse.y,mat.diffuse.z);
+            glUniform3f(mesh_uSpecularLocation,mat.specular.x,mat.specular.y,mat.specular.z);
+            glUniform3f(mesh_uEmissionLocation,mat.emission.x,mat.emission.y,mat.emission.z);
+            glUniform3f(mesh_uSunDirectionLocation,sunDirection.x,sunDirection.y,sunDirection.z);
+
+            glBindBuffer(GL_ARRAY_BUFFER,mesh->vertexBuffer);
+            glEnableVertexAttribArray(mesh_inPositionLocation);
+            glVertexAttribPointer(mesh_inPositionLocation,3,GL_FLOAT,GL_FALSE,0,nullptr);
+
+            glBindBuffer(GL_ARRAY_BUFFER,mesh->normalBuffer);
+            glEnableVertexAttribArray(mesh_inNormalLocation);
+            glVertexAttribPointer(mesh_inNormalLocation,3,GL_FLOAT,GL_FALSE,0,nullptr);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh->faceBuffer);
+            glDrawElements(GL_TRIANGLES,mesh->numElements,GL_UNSIGNED_INT,nullptr);
+        }
+
+    }
+
+    void Render(const CameraController& cam,
+                const std::vector<std::shared_ptr<Mesh>>& meshes,
+                const std::vector<Material>& materials,
+                const std::vector<Matrix4f>& poses){
+        Matrix3f viewRot = LookAtOrigin(sunDirection, Vector3f(0.0, 1.0, 0.0));
+        Matrix4f viewMatrix = Matrix4f(viewRot, Vector3f(0,0,0));
+        Matrix4f projectionMatrix = Matrix4f::Identity();
+        projectionMatrix.a[0][0] /= 25.0;
+        projectionMatrix.a[1][1] /= 25.0;
+        projectionMatrix.a[2][2] /= 25.0;
+        Matrix4f smPV = projectionMatrix*viewMatrix;
+        int viewport[4];
+        glGetIntegerv(GL_VIEWPORT, &viewport[0]);
+        glViewport(0, 0, shadowmap_width, shadowmap_height);
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowmap_fbo);
+        Render(viewMatrix, projectionMatrix, meshes, materials, poses, smPV);
+
+        glBindTexture(GL_TEXTURE_2D, shadowmap_depthTexture);
+        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        Render(cam.viewMatrix, cam.projectionMatrix, meshes, materials, poses, smPV);
+    }
+
+private:
     GLuint uvBuffer;
     GLint atmosphere_program;
-    GLint atmosphere_inUvLocation;
+    GLint atmosphere_inUVLocation;
     GLint atmosphere_uProjectionLocation;
     GLint atmosphere_uViewLocation;
     GLint atmosphere_uSunDirectionLocation;
     
     GLint floor_program;
-    GLint floor_inUvLocation;
+    GLint floor_inUVLocation;
     GLint floor_uProjectionLocation;
     GLint floor_uViewLocation;
+    GLint floor_uSMViewProjection;
     
     GLint mesh_program;
     GLint mesh_inPositionLocation;
@@ -302,21 +455,34 @@ struct Renderer{
     GLint mesh_uSpecularLocation;
     GLint mesh_uEmissionLocation;
     GLint mesh_uSunDirectionLocation;
+    GLint mesh_uSMViewProjection;
 
-    Vector3f sunDirection = Vector3f(0.0,1.0,3.0).Normalize();
+    GLuint shadowmap_depthTexture;
+    GLuint shadowmap_colorTexture;
+    GLuint shadowmap_fbo;
+    constexpr static GLuint shadowmap_width=2048, shadowmap_height=2048;
 
-    static constexpr const char* atmosphere_vertexShaderSource= SHADER_STRING(
-        in vec2 inUv;
-        out vec2 fragUv;
+
+    Vector3f sunDirection = Vector3f(0.0,1.0,1.5).Normalize();
+
+    static Matrix3f LookAtOrigin(Vector3f from, Vector3f up){
+        Vector3f v2 = -from.Normalize();
+        Vector3f v0 = Cross(v2, up).Normalize();
+        Vector3f v1 = -Cross(v2, v0).Normalize();
+        return Matrix3f(v0, v1, v2);
+    }
+
+    static constexpr const char* atmosphere_vertexShaderSource = SHADER_STRING(
+        in vec2 inUV;
+        out vec2 fragUV;
         void main(){
-            fragUv = inUv;
-            gl_Position = vec4(2.0 * inUv - 1.0,0.0,1.0);
+            fragUV = inUV;
+            gl_Position = vec4(2.0 * inUV - 1.0,0.0,1.0);
         }
     );
 
-
     static constexpr const char* atmosphere_fragmentShaderSource = SHADER_STRING(
-        in vec2 fragUv;
+        in vec2 fragUV;
         out vec4 fragColor;
         uniform mat4 uView;
         uniform mat4 uProjection;
@@ -343,176 +509,104 @@ struct Renderer{
         }
 
         void main(){
-            fragColor = vec4(raycast_color(fragUv),1.0);
+            fragColor = vec4(raycast_color(fragUV),1.0);
         }
     );
 
     static constexpr const char* floor_vertexShaderSource = SHADER_STRING(
-        in vec2 inUv;
-        out vec2 fragXZ;
+        in vec2 inUV;
+        out vec3 fragXYZ;
         uniform mat4 uProjection;
         uniform mat4 uView;
-        float width = 100;
-        float height = 100;
+        float width = 50;
+        float height = 50;
         void main(){
             vec2 dims = vec2(width,height);
             vec3 position = vec3(0.0);
-            position.xz = inUv * dims - dims*0.5;
-            fragXZ = position.xz;
+            position.xz = inUV * dims - dims*0.5;
+            fragXYZ = position;
             gl_Position = uProjection * uView * vec4(position,1.0);
         }
     );
 
     static constexpr const char* floor_fragmentShaderSource = SHADER_STRING(
-        in vec2 fragXZ;
+        in vec3 fragXYZ;
         out vec4 outCol;
 
+        uniform mat4 uSMViewProjection;
+        uniform sampler2D SMDepthSampler;
+
         void main(){
-            vec2 xz = round(fragXZ);
+            vec2 xz = round(fragXYZ/2.5).xz;
             if(mod(xz.x,2) == mod(xz.y,2)){
                 outCol = vec4(vec3(0.8),1.0);
             }else{
                 outCol = vec4(vec3(0.2),1.0);
             }
+
+            vec4 smPosition = uSMViewProjection * vec4(fragXYZ, 1.0);
+            vec3 pos = smPosition.xyz / smPosition.w * 0.5 + 0.5;
+            vec2 uv = pos.xy;
+            if(texture(SMDepthSampler, uv).r + 0.01< pos.z)
+                outCol.xyz *= 0.6;
         }
     );
 
 
     static constexpr const char* mesh_vertexShaderSource = SHADER_STRING(
-            in vec3 inPosition;
-            in vec3 inNormal;
-            out vec3 fragNormal;
-            out vec3 fragPosition;
+        in vec3 inPosition;
+        in vec3 inNormal;
+        out vec3 fragNormal;
+        out vec3 fragPosition;
+        out vec4 smPosition;
 
-            mat4 model = mat4(1.0);
-            mat4 cam = mat4(1.0);
-            uniform mat4 uView;
-            uniform mat4 uProjection;
-            uniform mat4 uModel;
+        mat4 model = mat4(1.0);
+        mat4 cam = mat4(1.0);
+        uniform mat4 uView;
+        uniform mat4 uProjection;
+        uniform mat4 uModel;
 
-            void main(){
-                fragNormal = mat3(uModel) * inNormal;
-                vec4 modelPosition = uModel*vec4(inPosition,1.0);
-                vec3 eyePosition = inverse(uView)[3].xyz;
+        uniform mat4 uSMViewProjection;
 
-                fragPosition = eyePosition - modelPosition.xyz;
-                gl_Position = uProjection*uView*modelPosition;
-            }
+        void main(){
+            fragNormal = mat3(uModel) * inNormal;
+            vec4 modelPosition = uModel*vec4(inPosition,1.0);
+            vec3 eyePosition = inverse(uView)[3].xyz;
+
+            fragPosition = eyePosition - modelPosition.xyz;
+
+            smPosition = uSMViewProjection * vec4(modelPosition.xyz, 1.0);
+            gl_Position = uProjection*uView*modelPosition;
+        }
     );
 
     static constexpr const char* mesh_fragmentShaderSource = SHADER_STRING(
-            in vec3 fragNormal;
-            in vec3 fragPosition;
-            out vec4 outColor;
-            uniform vec3 uAmbient;
-            uniform vec3 uDiffuse;
-            uniform vec3 uSpecular;
-            uniform vec3 uEmission;
-            uniform vec3 uSunDirection;
-            float lightIntenisity = 0.8;
-            vec3 lightDir = normalize(uSunDirection);
-            void main(){
-                float specularCoeff = pow(max(-dot(reflect(lightDir,fragNormal),normalize(fragPosition)),0.0),6.0);
-                float diffuseCoeff = max(dot(lightDir,fragNormal),0.0);
-                vec3 fragColor = uEmission + lightIntenisity * (uAmbient + uDiffuse * diffuseCoeff + uSpecular * specularCoeff);
-                outColor = vec4(fragColor,0.0);
-            }
-    );
+        in vec3 fragNormal;
+        in vec3 fragPosition;
+        in vec4 smPosition;
+        out vec4 outColor;
+        uniform vec3 uAmbient;
+        uniform vec3 uDiffuse;
+        uniform vec3 uSpecular;
+        uniform vec3 uEmission;
+        uniform vec3 uSunDirection;
 
-    Renderer(){
-        constexpr float uvData[] = {
-            0.0,0.0,
-            0.0,1.0,
-            1.0,1.0,
-            0.0,0.0,
-            1.0,0.0,
-            1.0,1.0
-        };
-        glGenBuffers(1,&uvBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
-        glBufferData(GL_ARRAY_BUFFER,sizeof(uvData),&uvData[0],GL_STATIC_DRAW);
-
-        atmosphere_program = compileProgram(atmosphere_vertexShaderSource,atmosphere_fragmentShaderSource);
-        atmosphere_inUvLocation = glGetAttribLocation(atmosphere_program,"inUv");
-        atmosphere_uProjectionLocation = glGetUniformLocation(atmosphere_program,"uProjection");
-        atmosphere_uViewLocation = glGetUniformLocation(atmosphere_program,"uView");
-        atmosphere_uSunDirectionLocation = glGetUniformLocation(atmosphere_program,"uSunDirection");
-
-        floor_program = compileProgram(floor_vertexShaderSource,floor_fragmentShaderSource);
-        floor_inUvLocation = glGetAttribLocation(floor_program,"inUv");
-        
-        floor_uProjectionLocation = glGetUniformLocation(floor_program,"uProjection");
-        floor_uViewLocation = glGetUniformLocation(floor_program,"uView");
-
-        mesh_program = compileProgram(mesh_vertexShaderSource,mesh_fragmentShaderSource);
-        mesh_inPositionLocation = glGetAttribLocation(mesh_program,"inPosition");
-        mesh_inNormalLocation = glGetAttribLocation(mesh_program,"inNormal");
-        mesh_uModelLocation = glGetUniformLocation(mesh_program,"uModel");
-        mesh_uViewLocation = glGetUniformLocation(mesh_program,"uView");
-        mesh_uProjectionLocation = glGetUniformLocation(mesh_program,"uProjection");
-        mesh_uAmbientLocation = glGetUniformLocation(mesh_program,"uAmbient");
-        mesh_uDiffuseLocation = glGetUniformLocation(mesh_program,"uDiffuse");
-        mesh_uSpecularLocation = glGetUniformLocation(mesh_program,"uSpecular");
-        mesh_uEmissionLocation = glGetUniformLocation(mesh_program,"uEmission");
-        mesh_uSunDirectionLocation = glGetUniformLocation(mesh_program,"uSunDirection");
-        
-    }
-
-    void Render(const CameraController& cam,const std::vector<std::shared_ptr<Mesh>>& meshes,const std::vector<Material>& materials,const std::vector<Matrix4f>& poses){
-      
-        //Render Atmosphere
-        glUseProgram(atmosphere_program);
-        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
-        glEnableVertexAttribArray(atmosphere_inUvLocation);
-        glVertexAttribPointer(atmosphere_inUvLocation,2,GL_FLOAT,GL_FALSE,0,nullptr);
-        glUniformMatrix4fv(atmosphere_uProjectionLocation,1,GL_TRUE,&cam.projectionMatrix.a[0][0]);
-        glUniformMatrix4fv(atmosphere_uViewLocation,1,GL_TRUE,&cam.viewMatrix.a[0][0]);
-        glUniform3f(atmosphere_uSunDirectionLocation,sunDirection.x,sunDirection.y,sunDirection.z);
-        glDrawArrays(GL_TRIANGLES,0,6);
-        //Atmosphere is infinitely far away from the camera.
-        //We just clear the depth buffer such that everything else is drawn on top.
-        glClear(GL_DEPTH_BUFFER_BIT);
-      
-
-        //Render Ground Plane (Floor)
-        glUseProgram(floor_program);
-        glBindBuffer(GL_ARRAY_BUFFER,uvBuffer);
-        glEnableVertexAttribArray(floor_inUvLocation);
-        glVertexAttribPointer(floor_inUvLocation,2,GL_FLOAT,GL_FALSE,0,nullptr);
-        glUniformMatrix4fv(floor_uProjectionLocation,1,GL_TRUE,&cam.projectionMatrix.a[0][0]);
-        glUniformMatrix4fv(floor_uViewLocation,1,GL_TRUE,&cam.viewMatrix.a[0][0]);
-        glDrawArrays(GL_TRIANGLES,0,6);       
-
-        //Render Meshes
-        glUseProgram(mesh_program);
-        
-        for(int i = 0;i<meshes.size();i++){
-            const auto& mesh = meshes[i];
-            const auto& pose = poses[i];
-            const auto& mat = materials[i];
+        uniform sampler2D SMDepthSampler;
+        float lightIntenisity = 0.8;
+        vec3 lightDir = normalize(uSunDirection);
+        void main(){
+            float specularCoeff = pow(max(-dot(reflect(lightDir,fragNormal),normalize(fragPosition)),0.0),6.0);
+            float diffuseCoeff = max(dot(lightDir,fragNormal),0.0);
+            vec3 fragColor = uEmission + lightIntenisity * (uAmbient + uDiffuse * diffuseCoeff + uSpecular * specularCoeff);
             
-            glUniformMatrix4fv(mesh_uViewLocation,1,GL_TRUE,&cam.viewMatrix.a[0][0]);
-            glUniformMatrix4fv(mesh_uProjectionLocation,1,GL_TRUE,&cam.projectionMatrix.a[0][0]);
-            glUniformMatrix4fv(mesh_uModelLocation,1,GL_TRUE,&pose.a[0][0]);
-            glUniform3f(mesh_uAmbientLocation,mat.ambient.x,mat.ambient.y,mat.ambient.z);
-            glUniform3f(mesh_uDiffuseLocation,mat.diffuse.x,mat.diffuse.y,mat.diffuse.z);
-            glUniform3f(mesh_uSpecularLocation,mat.specular.x,mat.specular.y,mat.specular.z);
-            glUniform3f(mesh_uEmissionLocation,mat.emission.x,mat.emission.y,mat.emission.z);
-            glUniform3f(mesh_uSunDirectionLocation,sunDirection.x,sunDirection.y,sunDirection.z);
-
-            glBindBuffer(GL_ARRAY_BUFFER,mesh->vertexBuffer);
-            glEnableVertexAttribArray(mesh_inPositionLocation);
-            glVertexAttribPointer(mesh_inPositionLocation,3,GL_FLOAT,GL_FALSE,0,nullptr);
-
-            glBindBuffer(GL_ARRAY_BUFFER,mesh->normalBuffer);
-            glEnableVertexAttribArray(mesh_inNormalLocation);
-            glVertexAttribPointer(mesh_inNormalLocation,3,GL_FLOAT,GL_FALSE,0,nullptr);
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,mesh->faceBuffer);
-            glDrawElements(GL_TRIANGLES,mesh->numElements,GL_UNSIGNED_INT,nullptr);
+            outColor = vec4(fragColor,0.0);
+            vec3 pos = smPosition.xyz * 0.5 + 0.5;
+            vec2 uv = pos.xy;
+            float bias = max(0.05 * (1.0 - dot(fragNormal, uSunDirection)), 0.005);
+            if(texture(SMDepthSampler, uv).r + bias < pos.z)
+                outColor.xyz *= 0.6;
         }
-
-    }
+    );
 };
 
 #endif
