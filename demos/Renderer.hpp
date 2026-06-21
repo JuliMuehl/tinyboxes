@@ -460,7 +460,7 @@ private:
     GLuint shadowmap_depthTexture;
     GLuint shadowmap_colorTexture;
     GLuint shadowmap_fbo;
-    constexpr static GLuint shadowmap_width=2048, shadowmap_height=2048;
+    constexpr static GLuint shadowmap_width=1024, shadowmap_height=1024;
 
 
     Vector3f sunDirection = Vector3f(0.0,1.0,1.5).Normalize();
@@ -531,7 +531,7 @@ private:
 
     static constexpr const char* floor_fragmentShaderSource = SHADER_STRING(
         in vec3 fragXYZ;
-        out vec4 outCol;
+        out vec4 outColor;
 
         uniform mat4 uSMViewProjection;
         uniform sampler2D SMDepthSampler;
@@ -539,16 +539,26 @@ private:
         void main(){
             vec2 xz = round(fragXYZ/2.5).xz;
             if(mod(xz.x,2) == mod(xz.y,2)){
-                outCol = vec4(vec3(0.8),1.0);
+                outColor = vec4(vec3(0.8),1.0);
             }else{
-                outCol = vec4(vec3(0.2),1.0);
+                outColor = vec4(vec3(0.2),1.0);
             }
 
             vec4 smPosition = uSMViewProjection * vec4(fragXYZ, 1.0);
             vec3 pos = smPosition.xyz / smPosition.w * 0.5 + 0.5;
             vec2 uv = pos.xy;
-            if(texture(SMDepthSampler, uv).r + 0.01< pos.z)
-                outCol.xyz *= 0.6;
+            vec2 texelSize = 1.0 / textureSize(SMDepthSampler, 0);
+            float shadowTotal = 0.0;
+            float bias = 0.005;
+
+            for(int x = -2; x <= 2; ++x) {
+                for(int y = -2; y <= 2; ++y) {
+                    vec2 offset = vec2(x, y) * texelSize;
+                    float closestDepth = texture(SMDepthSampler, uv + offset).r; 
+                    shadowTotal += (closestDepth + bias < pos.z) ? 0.2 : 1.0;
+                }
+            }
+            outColor.xyz *= (shadowTotal / 25.0);
         }
     );
 
@@ -603,8 +613,16 @@ private:
             vec3 pos = smPosition.xyz * 0.5 + 0.5;
             vec2 uv = pos.xy;
             float bias = max(0.05 * (1.0 - dot(fragNormal, uSunDirection)), 0.005);
-            if(texture(SMDepthSampler, uv).r + bias < pos.z)
-                outColor.xyz *= 0.6;
+            vec2 texelSize = 1.0 / textureSize(SMDepthSampler, 0);
+            float shadowTotal = 0.0;
+            for(int x = -2; x <= 2; ++x) {
+                for(int y = -2; y <= 2; ++y) {
+                    vec2 offset = vec2(x, y) * texelSize;
+                    float closestDepth = texture(SMDepthSampler, uv + offset).r; 
+                    shadowTotal += (closestDepth + bias < pos.z) ? 0.2 : 1.0;
+                }
+            }
+            outColor.xyz *= (shadowTotal / 25.0);
         }
     );
 };
