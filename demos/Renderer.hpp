@@ -326,12 +326,12 @@ struct Renderer{
             vec3 sun_direction = uSunDirection;
             sun_direction.x *= -1.0;
             float dp = max(dot(sun_direction,direction),0.0);
-            float intensity = pow(dp,100);
+            float intensity = pow(dp,200);
             return vec3(intensity);
         }
 
         vec3 sky_color(vec3 direction){
-            float h = 1.0-max(direction.y,0.0);
+            float h = smoothstep(0.0, 1.4,  1.4-max(direction.y,0.0)) / 1.2;
             return vec3(h*h,h,1.0*h+0.2);
         }
 
