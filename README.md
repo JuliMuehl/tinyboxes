@@ -55,4 +55,9 @@ You can use the following command to build the project (including the demos requ
 cmake -B build
 make -C build
 ```
-Press Space to pause/unpause the demo.
+You can run the demos using e.g.
+```bash
+build/demos/WreckingBallDemo
+```
+Press Space to pause/unpause the demo simulations.
+Use arrow keys and mouse to navigate the camera.
