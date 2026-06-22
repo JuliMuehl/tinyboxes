@@ -1,3 +1,7 @@
+
+
+
+
 ## TinyBoxes 
 A small 3D rigid body dynamics engine written in C++.
 The engine currently features collision detection between convex shapes using the GJK and EPA algorithms as well as collision resolution using  Projected Gauss Seidel Iteration (a.k.a. Sequential Impulses). The engine also implements a simple distance constraint and additional joints (hinge, ball and socket joint) may be added in the future.
@@ -6,7 +10,7 @@ TinyBoxes has no external dependencies despite OpenGL/GLEW and GLFW which are on
 
 ## Demos
 
-[WreckingBallDemo.webm](https://github.com/user-attachments/assets/bfb82e7a-7317-45a8-81c2-ac4d2eb713e5)
+[WreckingBallDemo.mp4](https://github.com/user-attachments/assets/d8fbcfd1-8e86-410c-90b9-182506b7003c)
 
 ## Usage
 
@@ -51,4 +55,10 @@ You can use the following command to build the project (including the demos requ
 cmake -B build
 make -C build
 ```
-Press Space to pause/unpause the demo.
+You can run the demo using
+```bash
+./build/demos/WreckingBallDemo
+```
+
+Press Space to pause/unpause the demo simulations.
+Use arrow keys and mouse to navigate the camera.
