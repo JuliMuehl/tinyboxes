@@ -57,7 +57,7 @@ make -C build
 ```
 You can run the demo using
 ```bash
-build/demos/WreckingBallDemo
+./build/demos/WreckingBallDemo
 ```
 
 Press Space to pause/unpause the demo simulations.
