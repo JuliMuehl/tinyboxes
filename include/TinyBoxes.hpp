@@ -49,14 +49,14 @@ private:
     inline PlaneConstraint(const Vector3f& normal, const std::pair<Vector3f, Vector3f>& uv, float d):
     normal(normal), u1(uv.first), u2(uv.second), d(d){}
 
-    static constexpr float BETA = .01;
-    static constexpr float MU = 0.5;
+    static constexpr float BETA = 0.1;
+    static constexpr float MU = 0.50;
     static constexpr float TOLLERANCE = 1e-5;
     static constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
     const Vector3f normal,u1,u2;
     float d;
     std::vector<std::pair<size_t,Contact>> contacts;
-    void ApplyImpulse(RigidBody& body,Contact contact,float dt);
+    void ApplyImpulse(RigidBody& body,Contact& contact,float dt);
 };
 
 class CollisionConstraint{
@@ -73,13 +73,13 @@ public:
         }
     }
 private:
-    static constexpr float BETA = 0.01;
-    static constexpr float MU = 0.5;
+    static constexpr float BETA = 0.1;
+    static constexpr float MU = 0.50;
     static constexpr float TOLLERANCE = 1e-4;
     std::map<std::pair<size_t,size_t>,std::list<Contact>> violations;
     std::map<std::pair<size_t,size_t>,int> last_contact;
     static constexpr float CONTACT_POINT_TOLLERANCE = 1e-3;
-    void ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact& contact,float dt);
+    void ApplyImpulse(RigidBody& b1,RigidBody& b2,Contact& contact,float dt);
 };
 
 class Joint:std::enable_shared_from_this<Joint>{
@@ -128,7 +128,7 @@ public:
     }
     void step(float dt);
 private:
-    static constexpr int GAUSS_SEIDEL_ITERATIONS = 200;
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 10;
     std::vector<RigidBody> bodies;
     std::vector<std::shared_ptr<Joint>> distanceJoints;
     Vector3f g;
@@ -153,7 +153,7 @@ public:
 private:
     const uint64_t bodyId1,bodyId2;
     const float r;
-    static constexpr float BETA = .01;
+    static constexpr float BETA = .1;
     static constexpr float TOLLERANCE = 1e-8;
 };
 

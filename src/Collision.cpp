@@ -114,7 +114,7 @@ bool GJK(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const Conve
     do{
         int next = 0;
         while(simplex_bits & 1 << next) next++;
-        Vector3f s1 = c1.Support((-1)*v);
+        Vector3f s1 = c1.Support((-1.0)*v);
         Vector3f s2 = c2.Support(v);
         y[next] = SupportPoint(s1,s2);
         if(Dot(y[next].x,v) >= 0) return false;

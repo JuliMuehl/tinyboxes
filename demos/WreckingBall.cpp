@@ -131,6 +131,6 @@ int main(int argc,char** argv){
         auto duration = (end_time-start_time);
         double fduration = std::chrono::duration<double>(duration).count();
         time += fduration;
-        std::cout << "Frame Per Second: " <<   1.0/fduration << "fps" << std::endl;
+        //std::cout << "Frame Per Second: " <<   1.0/fduration << "fps" << std::endl;
     }
 }

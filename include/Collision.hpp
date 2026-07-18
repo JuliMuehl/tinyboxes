@@ -11,6 +11,19 @@ struct Contact{
     Vector3f normal,u1,u2;
     Vector3f point;
     Vector3f r1,r2;
+    float lambda_n;
+    bool warmStart;
+    inline void ReplaceWith(const Contact& contact){
+        //Keep lambda_n for warm starting. Overwrite everything else and set warmStart = true.  
+        point = contact.point;
+        depth = contact.depth;
+        normal = contact.normal;
+        u1 = contact.u1;
+        u2 = contact.u2;
+        r1 = contact.r1;
+        r2 = contact.r2;
+        warmStart = false;
+    }
 };
 
 struct SupportPoint {
@@ -92,20 +105,23 @@ private:
 
 class AffineTransformCollider:public ConvexCollider{
 public:
-    AffineTransformCollider(const Vector3f& position,const Quaternionf& orientation,const ConvexCollider&  collider):position(position),orientation(orientation),collider(collider){}
+    AffineTransformCollider(const Vector3f& position,const Quaternionf& orientation,std::shared_ptr<ConvexCollider>  collider):
+    position(position),
+    orientation(orientation),
+    collider(std::move(collider)){}
     Vector3f Support(const Vector3f& direction) const noexcept override{
-        return orientation.Rotate(collider.Support(orientation.Conjugate().Rotate(direction))) + position;
+        return orientation.Rotate(collider->Support(orientation.Conjugate().Rotate(direction))) + position;
     }
     float GetBoundingRadius() const noexcept override{
-        return collider.GetBoundingRadius();
+        return collider->GetBoundingRadius();
     }
     ColliderType GetType() const noexcept override{
-        return collider.GetType();
+        return collider->GetType();
     }
 private:
     Quaternionf orientation;
     Vector3f position;
-    const ConvexCollider& collider;
+    std::shared_ptr<ConvexCollider> collider;
 };
 
 

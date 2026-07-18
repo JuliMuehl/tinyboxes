@@ -24,13 +24,14 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
             if(pair.first == id){
                 Contact& c = pair.second;
                 if((c.point - contact.point).Norm() <= CONTACT_POINT_TOLLERANCE){
-                    c = contact;
+                    c.ReplaceWith(contact);
                     replaced = true;
                     break;
                 }
             }
         }
         if(!replaced){
+            //New contact point -> no good intial guess for lambda_n, lambda_u1, lambda_u2 -> warm start = false.
             contacts.push_back(std::make_pair(id,contact));
         }
     };
@@ -45,12 +46,14 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
             contact.u1 = u1;
             contact.u2 = u2;
             contact.r1 = b.PointToLocal(contact.point);
+            contact.lambda_n = 0.0;
+            contact.warmStart = false;
             add_or_replace_contact(i,contact);
         }
     }
 }
 
-void PlaneConstraint::ApplyImpulse(RigidBody& body,Contact contact,float dt){
+void PlaneConstraint::ApplyImpulse(RigidBody& body,Contact& contact,float dt){
     Vector3f r = contact.point - body.x;
     auto invI = body.GetTransformedInverseInertia();
 
@@ -61,26 +64,34 @@ void PlaneConstraint::ApplyImpulse(RigidBody& body,Contact contact,float dt){
     float K_n = Dot(J_omega_n,invI.Transform(J_omega_n)) + body.inverseMass;
     float b_n = C * BETA / dt;
     Vector3f vTotal = body.v + Cross(r,body.omega);
-    float lambda_n = (-Dot(normal,vTotal) - b_n) / K_n;
-    lambda_n = std::max(lambda_n,0.0f);
+    float delta_lambda_n = (-Dot(normal,vTotal) - b_n) / K_n;
+     // Enforce contact.lambda_n + delta_lambda >= 0.0
+    delta_lambda_n = std::fmax(delta_lambda_n,-contact.lambda_n);
+    if(contact.warmStart){
+        delta_lambda_n += contact.lambda_n;
+        contact.warmStart = false;
+    }
+    contact.lambda_n += delta_lambda_n;
+    
     //Friction
     Vector3f J_v_u1 = u1;
     Vector3f J_v_u2 = u2;
     Vector3f J_omega_u1 = Cross(r,u1);
     Vector3f J_omega_u2 = Cross(r,u2);
-
+    
     float K_u1 = Dot(J_omega_u1,invI.Transform(J_omega_u1)) + body.inverseMass;
     float K_u2 = Dot(J_omega_u2,invI.Transform(J_omega_u2)) + body.inverseMass;
     float lambda_u1 = -(Dot(J_omega_u1,body.omega) + Dot(body.v,J_v_u1))/K_u1;
     float lambda_u2 = -(Dot(J_omega_u2,body.omega) + Dot(body.v,J_v_u2))/K_u1;
-    lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
-    lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+    lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n ));
+    lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n ));
+    
     if(K_n >= TOLLERANCE && K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE){
-        body.v += body.inverseMass * (lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
-        body.omega += invI.Transform(lambda_n * J_omega_n + lambda_u1*J_omega_u1 + lambda_u2*J_omega_u2);
+        
+        body.v += body.inverseMass * (delta_lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
+        body.omega += invI.Transform(delta_lambda_n * J_omega_n + lambda_u1*J_omega_u1 + lambda_u2*J_omega_u2);
     }
 }
-
 
 void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
     for(size_t i = 0;i<bodies.size()-1;i++){
@@ -91,8 +102,8 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                 std::vector<SupportPoint> simplex;
                 const RigidBody& b1 = bodies[i];
                 const RigidBody& b2 = bodies[j];
-                auto c1 = AffineTransformCollider(b1.x,b1.theta,*b1.collider);
-                auto c2 = AffineTransformCollider(b2.x,b2.theta,*b2.collider);
+                auto c1 = AffineTransformCollider(b1.x,b1.theta, b1.collider);
+                auto c2 = AffineTransformCollider(b2.x,b2.theta, b2.collider);
                 
                 if(GJK(simplex,c1,c2)){
                     collisionFound = true;
@@ -100,6 +111,8 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                     if(std::isnan(contact.depth)) continue;
                     contact.r1 = b1.PointToLocal(contact.point);
                     contact.r2 = b2.PointToLocal(contact.point);
+                    contact.warmStart = false;
+                    contact.lambda_n = 0.0;
                     auto& contacts = violations[key];
                     if(b1.collider->GetType() != ColliderType::Polyhedron || b2.collider->GetType() != ColliderType::Polyhedron) {
                         contacts.clear();
@@ -113,17 +126,20 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                         float dot = Dot(c.normal,contact.normal);
                         auto p = 0.5 * (b1.PointToGlobal(c.r1) + b2.PointToGlobal(c.r2));
                         if((c.point - contact.point).Norm() <= CONTACT_POINT_TOLLERANCE){
-                            c = contact;
+                            c.ReplaceWith(contact);
                             replacedContact = true;
                             break;
                         }
                     }
 
-                    if(!replacedContact) contacts.push_back(contact);
+                    if(!replacedContact) {
+                        contacts.push_back(contact);
+                    }
                 }
             }
         }
     }
+
     for(auto& entry : violations){
         auto i = entry.first.first,j=entry.first.second;
         auto& b1 = bodies[i],&b2=bodies[j];
@@ -144,7 +160,7 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
     }
 }
 
-void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact& contact,float dt){
+void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,Contact& contact,float dt){
     auto invI1 = b1.GetTransformedInverseInertia();
     auto invI2 = b2.GetTransformedInverseInertia();
 
@@ -161,8 +177,16 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact
     Vector3f v2 = b2.v + Cross(r2,b2.omega);
     Vector3f vrel = v1 - v2;
    
-    float lambda_n = (BETA * C/dt  + Dot(contact.normal,vrel)) / K_n;
-    lambda_n = std::fmax(lambda_n, 0.0);
+    float delta_lambda_n = (BETA*C/dt  + Dot(contact.normal,vrel)) / K_n;
+    
+    // Enforce contact.lambda_n + delta_lambda >= 0.0
+    delta_lambda_n = std::fmax(delta_lambda_n,-contact.lambda_n);
+    if(contact.warmStart){
+        delta_lambda_n += contact.lambda_n;
+        contact.warmStart = false;
+    }
+    contact.lambda_n += delta_lambda_n; 
+    
     Vector3f J_v_u1 = contact.u1;
     Vector3f J_omega1_u1 = -Cross(r1,contact.u1);
     Vector3f J_omega2_u1 = -Cross(r2,contact.u1);
@@ -175,14 +199,14 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact
     
     if(K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE && K_n >= TOLLERANCE){
         float lambda_u1 = (Dot(J_v_u1,b1.v-b2.v) + Dot(J_omega1_u1,b1.omega) - Dot(J_omega2_u1,b2.omega))/K_u1;
-        lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
+        lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n));
         float lambda_u2 = (Dot(J_v_u2,b1.v-b2.v) + Dot(J_omega1_u2,b1.omega) -Dot(J_omega2_u2,b2.omega))/K_u2;
-        lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(lambda_n),MU*std::fabs(lambda_n));
-
-        b1.v += -b1.inverseMass*(lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
-        b2.v += b2.inverseMass*(lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
-        b1.omega += -invI1.Transform(lambda_n * J_omega1_n + lambda_u1 * J_omega1_u1 + lambda_u2 * J_omega1_u2);
-        b2.omega += invI2.Transform(lambda_n * J_omega2_n + lambda_u1 * J_omega2_u1 + lambda_u2 * J_omega2_u2);
+        lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n ));
+        
+        b1.v += -b1.inverseMass*(delta_lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
+        b2.v += b2.inverseMass*(delta_lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
+        b1.omega += -invI1.Transform(delta_lambda_n * J_omega1_n + lambda_u1 * J_omega1_u1 + lambda_u2 * J_omega1_u2);
+        b2.omega += invI2.Transform(delta_lambda_n * J_omega2_n + lambda_u1 * J_omega2_u1 + lambda_u2 * J_omega2_u2);
     }
 }
 
