@@ -93,6 +93,14 @@ inline bool operator==(Vector3f v,Vector3f w){
     return v.x == w.x && v.y == w.y && v.z == w.z;
 }
 
+inline std::pair<Vector3f, Vector3f> ComputeTangentFrame(Vector3f n){
+    Vector3f u1, u2;
+    if(n.x != 0) u1 = Cross(n,Vector3f(0,1,0)).Normalize();
+    else u1 = Cross(n,Vector3f(1,0,0)).Normalize();
+    u2 = Cross(u1,n).Normalize();
+    return {u1, u2};
+}
+
 struct Quaternionf{
     float s;
     Vector3f v;

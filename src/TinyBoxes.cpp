@@ -196,7 +196,7 @@ void World::step(float dt){
         plane_c.ApplyImpulses(bodies,dt);
         collision_c.ApplyImpulses(bodies,dt);
         for(auto& joint:distanceJoints){
-            joint.ApplyImpulses(bodies,dt);
+            joint->ApplyImpulses(bodies,dt);
         }
     }
     for(auto& body:bodies){

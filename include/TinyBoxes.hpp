@@ -34,11 +34,9 @@ struct RigidBody{
 
 class PlaneConstraint{
 public:
-    inline PlaneConstraint(Vector3f normal,float d):normal(normal.Normalize()),d(d){
-        if(normal.x != 0) u1 = Cross(normal,Vector3f(0,1,0)).Normalize();
-        else u1 = Cross(normal,Vector3f(1,0,0)).Normalize();
-        u2 = Cross(u1,normal).Normalize();
-    }
+    inline PlaneConstraint(Vector3f normal,float d): 
+    PlaneConstraint(normal.Normalize(), ComputeTangentFrame(normal), d){}
+    
     void FindViolations(const std::vector<RigidBody>& bodies);
     inline void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
         for(auto& entry:contacts){
@@ -48,11 +46,14 @@ public:
         }
     }
 private:
+    inline PlaneConstraint(const Vector3f& normal, const std::pair<Vector3f, Vector3f>& uv, float d):
+    normal(normal), u1(uv.first), u2(uv.second), d(d){}
+
     static constexpr float BETA = .01;
     static constexpr float MU = 0.5;
     static constexpr float TOLLERANCE = 1e-5;
     static constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
-    Vector3f normal,u1,u2;
+    const Vector3f normal,u1,u2;
     float d;
     std::vector<std::pair<size_t,Contact>> contacts;
     void ApplyImpulse(RigidBody& body,Contact contact,float dt);
@@ -81,35 +82,12 @@ private:
     void ApplyImpulse(RigidBody& b1,RigidBody& b2,const Contact& contact,float dt);
 };
 
-class DistanceJoint{
-public:
-    DistanceJoint(uint64_t bodyId1,uint64_t bodyId2,float r):bodyId1(bodyId1),bodyId2(bodyId2),r(r){}
-    inline void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
-        RigidBody &b1 = bodies[bodyId1],&b2 = bodies[bodyId2];
-        Vector3f J = b1.x - b2.x;
-        float C = .5 * J.NormSquared() - r*r;
-        float K = (b1.inverseMass + b2.inverseMass ) * Dot(J,J);
-        float lambda = (Dot(b1.v - b2.v,J) + BETA*C/dt)/ K;
-        if(K >= TOLLERANCE){
-            b1.v +=-b1.inverseMass * lambda * J;
-            b2.v += b2.inverseMass * lambda * J;
-        }
-    }
-private:
-    const uint64_t bodyId1,bodyId2;
-    const float r;
-    static constexpr float BETA = .01;
-    static constexpr float TOLLERANCE = 1e-8;
+class Joint:std::enable_shared_from_this<Joint>{
+    public:
+    virtual void ApplyImpulses(std::vector<RigidBody>& bodies,float dt) = 0;
 };
 
 class World{
-private:
-    static constexpr int GAUSS_SEIDEL_ITERATIONS = 200;
-    std::vector<RigidBody> bodies;
-    std::vector<DistanceJoint> distanceJoints;
-    Vector3f g;
-    PlaneConstraint plane_c = PlaneConstraint(Vector3f(0,1,0),0);
-    CollisionConstraint collision_c;
 public:
     using BodyId = uint64_t;
     World(Vector3f g = Vector3f(0,-9.81,0)):g(g){}
@@ -145,20 +123,45 @@ public:
     inline Vector3f PointToGlobal(BodyId bodyId,Vector3f r) const{
         return bodies[bodyId].PointToGlobal(r);
     }
-    inline void AddJoint(DistanceJoint joint){
+    inline void AddJoint(std::shared_ptr<Joint> joint){
         distanceJoints.push_back(joint);
     }
     void step(float dt);
+private:
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 200;
+    std::vector<RigidBody> bodies;
+    std::vector<std::shared_ptr<Joint>> distanceJoints;
+    Vector3f g;
+    PlaneConstraint plane_c = PlaneConstraint(Vector3f(0,1,0),0);
+    CollisionConstraint collision_c;
 };
 
-class BodyRef{
-    friend class World;
-    using BodyId=World::BodyId;
-    private:
-    World& world;
-    BodyId id;
+class DistanceJoint:public Joint{
+public:
+    DistanceJoint(uint64_t bodyId1,uint64_t bodyId2,float r):bodyId1(bodyId1),bodyId2(bodyId2),r(r){}
+    virtual void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
+        RigidBody &b1 = bodies[bodyId1],&b2 = bodies[bodyId2];
+        Vector3f J = b1.x - b2.x;
+        float C = .5 * J.NormSquared() - r*r;
+        float K = (b1.inverseMass + b2.inverseMass ) * Dot(J,J);
+        float lambda = (Dot(b1.v - b2.v,J) + BETA*C/dt)/ K;
+        if(K >= TOLLERANCE){
+            b1.v +=-b1.inverseMass * lambda * J;
+            b2.v += b2.inverseMass * lambda * J;
+        }
+    }
+private:
+    const uint64_t bodyId1,bodyId2;
+    const float r;
+    static constexpr float BETA = .01;
+    static constexpr float TOLLERANCE = 1e-8;
+};
 
+
+class BodyRef{
+    friend class World;    
     public:
+    using BodyId=World::BodyId;
     BodyRef(World& w, BodyId bid):world(w), id(bid) {}
     inline Matrix4f BodyTransform(){
         return world.BodyTransform(id);
@@ -190,6 +193,10 @@ class BodyRef{
     inline BodyId GetId(){
         return id;
     }
+
+    private:
+    World& world;
+    BodyId id;
 };
 
 #endif

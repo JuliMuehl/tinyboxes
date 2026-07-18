@@ -75,7 +75,6 @@ struct Mesh{
     GLuint normalBuffer;
     GLuint faceBuffer;
     const size_t numElements;
-    
     Mesh(const std::vector<Vector3f>&vertices,
          const std::vector<Vector3f>& normals,
          const std::vector<std::tuple<GLuint,GLuint,GLuint>>& faces):numElements(faces.size() * 3){
@@ -206,17 +205,19 @@ struct Mesh{
     }
 };
 
-struct CameraController{
-    Matrix4f GetViewMatrix(){
-        return viewMatrix;
-    }
-    Matrix4f viewMatrix = Matrix4f::Identity();
-    Matrix4f projectionMatrix;
-    Vector3f eyePosition = Vector3f();
-    float pitch=0.0,yaw=0.0;
-    float fov,aspect,near,far;
+class CameraController{
+public:
     CameraController(float fov=M_PI/4,float aspect=1.0,float near=0.5,float far=1000.0):fov(fov),aspect(aspect),near(near),far(far){
         UpdateProjectionMatrix();
+    }
+    const Matrix4f& GetViewMatrix() const {
+        return viewMatrix;
+    }
+    const Matrix4f& GetProjectionMatrix() const {
+        return projectionMatrix;
+    }
+    void SetPosition(const Vector3f& eyePosition){
+        this->eyePosition = eyePosition;
     }
     void UpdateProjectionMatrix(){
         projectionMatrix.a[0][0] = atanf(fov/2.0) / aspect;
@@ -276,6 +277,12 @@ struct CameraController{
         viewMatrix.a[2][3] = lastCol.z;
         viewMatrix.a[3][3] = 1.0;
     }
+private:
+    Matrix4f viewMatrix = Matrix4f::Identity();
+    Matrix4f projectionMatrix;
+    Vector3f eyePosition = Vector3f();
+    float pitch=0.0,yaw=0.0;
+    float fov,aspect,near,far;
 };
 
 class Renderer{
@@ -427,7 +434,7 @@ public:
         glBindTexture(GL_TEXTURE_2D, shadowmap_depthTexture);
         glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        Render(cam.viewMatrix, cam.projectionMatrix, meshes, materials, poses, smPV);
+        Render(cam.GetViewMatrix(), cam.GetProjectionMatrix(), meshes, materials, poses, smPV);
     }
 
 private:

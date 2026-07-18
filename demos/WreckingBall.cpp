@@ -36,7 +36,7 @@ int main(int argc,char** argv){
     BodyId ball1 = w.AddBody({Vector3f(3.0,8,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(0,0,0),Vector3f(0,0,0), Matrix3f::Identity(),0.0,collider_sphere});
     BodyId ball2 = w.AddBody({Vector3f(3.0,11,0),Quaternionf(1,Vector3f(0,0,0)),Vector3f(50,0,0),Vector3f(0,0,0), .5 * Matrix3f::Identity(),0.5,collider_sphere});
 
-    w.AddJoint(DistanceJoint(ball1,ball2,3));
+    w.AddJoint(std::make_shared<DistanceJoint>(ball1,ball2,3));
 
     if(!glfwInit()){
         std::cout << "Error initializing GLFW" << std::endl;
@@ -80,7 +80,7 @@ int main(int argc,char** argv){
     glEnable(GL_DEPTH_TEST);
 
     CameraController cam = CameraController(45.0,640.0/480.0,0.5,1000.0);
-    cam.eyePosition = Vector3f(0.0,-10.0,-10.0);
+    cam.SetPosition(Vector3f(0.0,-10.0,-10.0));
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     bool processInput = true;
 
