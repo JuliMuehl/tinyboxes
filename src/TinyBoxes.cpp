@@ -1,6 +1,8 @@
 #include "TinyBoxes.hpp"
 #include "Math.hpp"
 #include <algorithm>
+#include <limits>
+#include <iostream>
 
 void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
     for(auto it = contacts.begin();it != contacts.end();){
@@ -9,7 +11,7 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
         auto p = body.PointToGlobal(contact.r1);
         
         bool movedAway = (contact.point - p).Norm() > CONTACT_POINT_TOLLERANCE;
-        bool inactive = Dot(p, normal) > d + CONTACT_POINT_TOLLERANCE;
+        bool inactive = Dot(p, normal) > d + CONTACT_CONSTRAINT_THRESHOLD;
         if(movedAway || inactive){
             it = contacts.erase(it);
         }else{
@@ -46,51 +48,65 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
             contact.u1 = u1;
             contact.u2 = u2;
             contact.r1 = b.PointToLocal(contact.point);
-            contact.lambda_n = 0.0;
-            contact.warmStart = false;
+            contact.ResetCache();
             add_or_replace_contact(i,contact);
         }
     }
 }
 
-void PlaneConstraint::ApplyImpulse(RigidBody& body,Contact& contact,float dt){
+bool PlaneConstraint::ApplyImpulse(RigidBody& body,Contact& contact,float dt){
+    
+    
     Vector3f r = contact.point - body.x;
     auto invI = body.GetTransformedInverseInertia();
-
-    //Non Penetration
     Vector3f J_v_n = normal;
     Vector3f J_omega_n = Cross(normal,r);
-    float C = Dot(body.x + r,normal) - d;
-    float K_n = Dot(J_omega_n,invI.Transform(J_omega_n)) + body.inverseMass;
-    float b_n = C * BETA / dt;
-    Vector3f vTotal = body.v + Cross(r,body.omega);
-    float delta_lambda_n = (-Dot(normal,vTotal) - b_n) / K_n;
-     // Enforce contact.lambda_n + delta_lambda >= 0.0
-    delta_lambda_n = std::fmax(delta_lambda_n,-contact.lambda_n);
-    if(contact.warmStart){
-        delta_lambda_n += contact.lambda_n;
-        contact.warmStart = false;
-    }
-    contact.lambda_n += delta_lambda_n;
-    
-    //Friction
     Vector3f J_v_u1 = u1;
     Vector3f J_v_u2 = u2;
     Vector3f J_omega_u1 = Cross(r,u1);
     Vector3f J_omega_u2 = Cross(r,u2);
+
+    float C = Dot(body.x + r,normal) - d;
+    float K_n = Dot(J_omega_n,invI.Transform(J_omega_n)) + body.inverseMass;
+    float b_n = C * BETA / dt;
+    Vector3f vTotal = body.v + Cross(r,body.omega);
+    //Non Penetration
     
     float K_u1 = Dot(J_omega_u1,invI.Transform(J_omega_u1)) + body.inverseMass;
     float K_u2 = Dot(J_omega_u2,invI.Transform(J_omega_u2)) + body.inverseMass;
-    float lambda_u1 = -(Dot(J_omega_u1,body.omega) + Dot(body.v,J_v_u1))/K_u1;
-    float lambda_u2 = -(Dot(J_omega_u2,body.omega) + Dot(body.v,J_v_u2))/K_u1;
-    lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n ));
-    lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n ));
-    
-    if(K_n >= TOLLERANCE && K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE){
-        
-        body.v += body.inverseMass * (delta_lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
-        body.omega += invI.Transform(delta_lambda_n * J_omega_n + lambda_u1*J_omega_u1 + lambda_u2*J_omega_u2);
+    float delta_lambda_n, delta_lambda_u1, delta_lambda_u2;
+    if(contact.warmStart){
+        delta_lambda_n = contact.lambda_n;
+        delta_lambda_u1 = contact.lambda_u1;
+        delta_lambda_u2 = contact.lambda_u2;
+        contact.warmStart = false;
+    }else{
+        float lambda_n_prev = contact.lambda_n;
+        delta_lambda_n = (-Dot(normal,vTotal) - b_n) / K_n;
+        contact.lambda_n = std::fmax(contact.lambda_n + delta_lambda_n, 0.0);
+        delta_lambda_n = contact.lambda_n - lambda_n_prev;
+        //Friction
+        delta_lambda_u1 = -(Dot(J_omega_u1,body.omega) + Dot(body.v,J_v_u1))/K_u1;
+        delta_lambda_u2 = -(Dot(J_omega_u2,body.omega) + Dot(body.v,J_v_u2))/K_u2;
+        float lambda_u1_prev = contact.lambda_u1, lambda_u2_prev = contact.lambda_u2;
+        contact.lambda_u1 += delta_lambda_u1;
+        contact.lambda_u2 += delta_lambda_u2;
+        float coulombBound = MU*std::fabs(contact.lambda_n);
+        contact.lambda_u1 = std::clamp(contact.lambda_u1,-coulombBound, coulombBound);
+        contact.lambda_u2 = std::clamp(contact.lambda_u2,-coulombBound, coulombBound);
+        delta_lambda_u1 = contact.lambda_u1 - lambda_u1_prev;
+        delta_lambda_u2 = contact.lambda_u2 - lambda_u2_prev; 
     }
+    //std::cout << "delta_lambda_n = " << delta_lambda_n << " delta_lambda_u1 = " << delta_lambda_u1 << " delta_lambda_u2= " << delta_lambda_u2<< std::endl; 
+    if((K_n >= TOLLERANCE && K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE)){
+        body.v += body.inverseMass * (delta_lambda_n * J_v_n + delta_lambda_u1*J_v_u1 + delta_lambda_u2*J_v_u2);
+        body.omega += invI.Transform(delta_lambda_n * J_omega_n + delta_lambda_u1*J_omega_u1 + delta_lambda_u2*J_omega_u2);
+    }
+    const auto eps = std::numeric_limits<float>::epsilon();
+    return !contact.warmStart && 
+            std::fabs(delta_lambda_n) /(eps+std::fabs(contact.lambda_n)) + 
+            std::fabs(delta_lambda_u1)/(eps+std::fabs(contact.lambda_u2)) + 
+            std::fabs(delta_lambda_u2)/(eps+std::fabs(contact.lambda_u2)) < CONVERGENCE_TRESHOLD; 
 }
 
 void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
@@ -111,8 +127,7 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
                     if(std::isnan(contact.depth)) continue;
                     contact.r1 = b1.PointToLocal(contact.point);
                     contact.r2 = b2.PointToLocal(contact.point);
-                    contact.warmStart = false;
-                    contact.lambda_n = 0.0;
+                    contact.ResetCache();
                     auto& contacts = violations[key];
                     if(b1.collider->GetType() != ColliderType::Polyhedron || b2.collider->GetType() != ColliderType::Polyhedron) {
                         contacts.clear();
@@ -150,7 +165,7 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
             auto p2 = b2.PointToGlobal(c.r2);
             bool movedAway1 = (c.point - p1).Norm() > CONTACT_POINT_TOLLERANCE;
             bool movedAway2 = (c.point - p2).Norm() > CONTACT_POINT_TOLLERANCE;
-            bool inactive = Dot(p1 - p2, c.normal) > CONTACT_POINT_TOLLERANCE;
+            bool inactive = Dot(p1 - p2, c.normal) > CONTACT_CONSTRAINT_THRESHOLD;
             if(movedAway1 || movedAway2 || inactive){
                 it = contacts.erase(it);
             }else{
@@ -160,7 +175,7 @@ void CollisionConstraint::FindViolations(const std::vector<RigidBody>& bodies){
     }
 }
 
-void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,Contact& contact,float dt){
+bool CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,Contact& contact,float dt){
     auto invI1 = b1.GetTransformedInverseInertia();
     auto invI2 = b2.GetTransformedInverseInertia();
 
@@ -176,38 +191,49 @@ void CollisionConstraint::ApplyImpulse(RigidBody& b1,RigidBody& b2,Contact& cont
     Vector3f v1 = b1.v + Cross(r1,b1.omega);
     Vector3f v2 = b2.v + Cross(r2,b2.omega);
     Vector3f vrel = v1 - v2;
-   
-    float delta_lambda_n = (BETA*C/dt  + Dot(contact.normal,vrel)) / K_n;
-    
-    // Enforce contact.lambda_n + delta_lambda >= 0.0
-    delta_lambda_n = std::fmax(delta_lambda_n,-contact.lambda_n);
-    if(contact.warmStart){
-        delta_lambda_n += contact.lambda_n;
-        contact.warmStart = false;
-    }
-    contact.lambda_n += delta_lambda_n; 
     
     Vector3f J_v_u1 = contact.u1;
     Vector3f J_omega1_u1 = -Cross(r1,contact.u1);
-    Vector3f J_omega2_u1 = -Cross(r2,contact.u1);
-    float K_u1 = b1.inverseMass + b2.inverseMass + Dot(J_omega1_u1,invI1.Transform(J_omega1_u1)) + Dot(J_omega2_u1,invI2.Transform(J_omega2_u1));
-    
+    Vector3f J_omega2_u1 = -Cross(r2,contact.u1); 
     Vector3f J_v_u2 = contact.u2;
     Vector3f J_omega1_u2 = Cross(contact.u2,r1);
     Vector3f J_omega2_u2 = Cross(contact.u2,r2);
+    float K_u1 = b1.inverseMass + b2.inverseMass + Dot(J_omega1_u1,invI1.Transform(J_omega1_u1)) + Dot(J_omega2_u1,invI2.Transform(J_omega2_u1));
     float K_u2 = b1.inverseMass + b2.inverseMass + Dot(J_omega1_u2,invI1.Transform(J_omega1_u2)) + Dot(J_omega2_u2,invI2.Transform(J_omega2_u2));
-    
-    if(K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE && K_n >= TOLLERANCE){
-        float lambda_u1 = (Dot(J_v_u1,b1.v-b2.v) + Dot(J_omega1_u1,b1.omega) - Dot(J_omega2_u1,b2.omega))/K_u1;
-        lambda_u1 = std::clamp(lambda_u1,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n));
-        float lambda_u2 = (Dot(J_v_u2,b1.v-b2.v) + Dot(J_omega1_u2,b1.omega) -Dot(J_omega2_u2,b2.omega))/K_u2;
-        lambda_u2 = std::clamp(lambda_u2,-MU*std::fabs(contact.lambda_n ),MU*std::fabs(contact.lambda_n ));
-        
-        b1.v += -b1.inverseMass*(delta_lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
-        b2.v += b2.inverseMass*(delta_lambda_n * J_v_n + lambda_u1*J_v_u1 + lambda_u2*J_v_u2);
-        b1.omega += -invI1.Transform(delta_lambda_n * J_omega1_n + lambda_u1 * J_omega1_u1 + lambda_u2 * J_omega1_u2);
-        b2.omega += invI2.Transform(delta_lambda_n * J_omega2_n + lambda_u1 * J_omega2_u1 + lambda_u2 * J_omega2_u2);
+
+    float delta_lambda_n, delta_lambda_u1, delta_lambda_u2;
+    if(contact.warmStart){
+        delta_lambda_n = contact.lambda_n;
+        delta_lambda_u1 = contact.lambda_u1;
+        delta_lambda_u2 = contact.lambda_u2;
+        contact.warmStart = false;
+    }else{
+        float lambda_n_prev = contact.lambda_n, lambda_u1_prev = contact.lambda_u1, lambda_u2_prev = contact.lambda_u2;
+        delta_lambda_n = (BETA*C/dt  + Dot(contact.normal,vrel)) / K_n;
+        // Enforce contact.lambda_n + delta_lambda >= 0.0
+        contact.lambda_n = std::fmax(contact.lambda_n + delta_lambda_n, 0.0);
+        delta_lambda_n = contact.lambda_n - lambda_n_prev;
+
+        delta_lambda_u2 = (Dot(J_v_u2,b1.v-b2.v) + Dot(J_omega1_u2,b1.omega)- Dot(J_omega2_u2,b2.omega))/K_u2;
+        delta_lambda_u1 = (Dot(J_v_u1,b1.v-b2.v) + Dot(J_omega1_u1,b1.omega) - Dot(J_omega2_u1,b2.omega))/K_u1;
+        float coulombBound = MU*std::fabs(contact.lambda_n);
+        contact.lambda_u1 = std::clamp(contact.lambda_u1 + delta_lambda_u1,-coulombBound,coulombBound);
+        contact.lambda_u2 = std::clamp(contact.lambda_u2 + delta_lambda_u2,-coulombBound,coulombBound);
+        delta_lambda_u1 = contact.lambda_u1 - lambda_u1_prev;
+        delta_lambda_u2 = contact.lambda_u2 - lambda_u2_prev;
     }
+    
+    if((K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE && K_n >= TOLLERANCE)){
+        b1.v += -b1.inverseMass*(delta_lambda_n * J_v_n + delta_lambda_u1*J_v_u1 + delta_lambda_u2*J_v_u2);
+        b2.v += b2.inverseMass*(delta_lambda_n * J_v_n + delta_lambda_u1*J_v_u1 + delta_lambda_u2*J_v_u2);
+        b1.omega += -invI1.Transform(delta_lambda_n * J_omega1_n + delta_lambda_u1 * J_omega1_u1 + delta_lambda_u2 * J_omega1_u2);
+        b2.omega += invI2.Transform(delta_lambda_n * J_omega2_n + delta_lambda_u1 * J_omega2_u1 + delta_lambda_u2 * J_omega2_u2);
+    }
+    const auto eps = std::numeric_limits<float>::epsilon();
+    return !contact.warmStart && 
+            std::fabs(delta_lambda_n) /(eps+std::fabs(contact.lambda_n)) + 
+            std::fabs(delta_lambda_u1)/(eps+std::fabs(contact.lambda_u2)) + 
+            std::fabs(delta_lambda_u2)/(eps+std::fabs(contact.lambda_u2)) < CONVERGENCE_TRESHOLD; 
 }
 
 void World::step(float dt){
@@ -216,13 +242,17 @@ void World::step(float dt){
     }
     plane_c.FindViolations(bodies);
     collision_c.FindViolations(bodies);
-    for(int i = 0;i<GAUSS_SEIDEL_ITERATIONS;i++){
-        plane_c.ApplyImpulses(bodies,dt);
-        collision_c.ApplyImpulses(bodies,dt);
+    int i;
+    for(i = 0;i<GAUSS_SEIDEL_ITERATIONS;i++){
+        bool converged = true;
+        converged = converged & plane_c.ApplyImpulses(bodies,dt);
+        converged = converged & collision_c.ApplyImpulses(bodies,dt);
         for(auto& joint:distanceJoints){
-            joint->ApplyImpulses(bodies,dt);
+            converged = converged & joint->ApplyImpulses(bodies,dt);
         }
+        if(converged) break;
     }
+    std::cout << "Number of Gauss Seidel iterations " << i << "\n";
     for(auto& body:bodies){
         body.x += dt*body.v;
         body.theta += dt*(body.theta*body.omega);

@@ -12,6 +12,7 @@ struct Contact{
     Vector3f point;
     Vector3f r1,r2;
     float lambda_n;
+    float lambda_u1, lambda_u2;
     bool warmStart;
     inline void ReplaceWith(const Contact& contact){
         //Keep lambda_n for warm starting. Overwrite everything else and set warmStart = true.  
@@ -22,6 +23,12 @@ struct Contact{
         u2 = contact.u2;
         r1 = contact.r1;
         r2 = contact.r2;
+        warmStart = true;
+    }
+    inline void ResetCache(){
+        lambda_n = 0.0;
+        lambda_u1 = 0.0;
+        lambda_u2 = 0.0;
         warmStart = false;
     }
 };

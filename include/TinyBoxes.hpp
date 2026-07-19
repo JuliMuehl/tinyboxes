@@ -38,53 +38,61 @@ public:
     PlaneConstraint(normal.Normalize(), ComputeTangentFrame(normal), d){}
     
     void FindViolations(const std::vector<RigidBody>& bodies);
-    inline void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
+    inline bool ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
+        bool converged = true;
         for(auto& entry:contacts){
             auto& id = entry.first;
             auto& contact = entry.second;
-            ApplyImpulse(bodies[id],contact,dt);
+            converged = converged & ApplyImpulse(bodies[id],contact,dt);
         }
+        return converged;
     }
 private:
     inline PlaneConstraint(const Vector3f& normal, const std::pair<Vector3f, Vector3f>& uv, float d):
     normal(normal), u1(uv.first), u2(uv.second), d(d){}
 
-    static constexpr float BETA = 0.1;
+    static constexpr float BETA = 0.01;
     static constexpr float MU = 0.50;
     static constexpr float TOLLERANCE = 1e-5;
-    static constexpr float CONTACT_POINT_TOLLERANCE = 1e-2;
+    static constexpr float CONTACT_POINT_TOLLERANCE = 5e-3;
+    static constexpr float CONTACT_CONSTRAINT_THRESHOLD = 1e-6;
+    static constexpr float CONVERGENCE_TRESHOLD = 10.0 / 100.0;
     const Vector3f normal,u1,u2;
     float d;
     std::vector<std::pair<size_t,Contact>> contacts;
-    void ApplyImpulse(RigidBody& body,Contact& contact,float dt);
+    bool ApplyImpulse(RigidBody& body,Contact& contact,float dt);
 };
 
 class CollisionConstraint{
 public:
     void FindViolations(const std::vector<RigidBody>& bodies);
-    inline void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
+    inline bool ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
+        bool converged = true;
         for(auto& entry:violations){
             size_t i = entry.first.first,j = entry.first.second;
             
             auto& contacts = entry.second;
             for(auto& contact:contacts){
-                ApplyImpulse(bodies[i],bodies[j],contact,dt);
+                converged = converged & ApplyImpulse(bodies[i],bodies[j],contact,dt);
             }
         }
+        return converged;
     }
 private:
-    static constexpr float BETA = 0.1;
+    static constexpr float BETA = 0.01;
     static constexpr float MU = 0.50;
-    static constexpr float TOLLERANCE = 1e-4;
+    static constexpr float TOLLERANCE = 1e-5;
+    static constexpr float CONTACT_POINT_TOLLERANCE = 5e-3;
+    static constexpr float CONTACT_CONSTRAINT_THRESHOLD = 1e-6;
+    static constexpr float CONVERGENCE_TRESHOLD = 10.0 / 100.0;
     std::map<std::pair<size_t,size_t>,std::list<Contact>> violations;
     std::map<std::pair<size_t,size_t>,int> last_contact;
-    static constexpr float CONTACT_POINT_TOLLERANCE = 1e-3;
-    void ApplyImpulse(RigidBody& b1,RigidBody& b2,Contact& contact,float dt);
+    bool ApplyImpulse(RigidBody& b1,RigidBody& b2,Contact& contact,float dt);
 };
 
 class Joint:std::enable_shared_from_this<Joint>{
     public:
-    virtual void ApplyImpulses(std::vector<RigidBody>& bodies,float dt) = 0;
+    virtual bool ApplyImpulses(std::vector<RigidBody>& bodies,float dt) = 0;
 };
 
 class World{
@@ -128,7 +136,7 @@ public:
     }
     void step(float dt);
 private:
-    static constexpr int GAUSS_SEIDEL_ITERATIONS = 10;
+    static constexpr int GAUSS_SEIDEL_ITERATIONS = 512;
     std::vector<RigidBody> bodies;
     std::vector<std::shared_ptr<Joint>> distanceJoints;
     Vector3f g;
@@ -139,24 +147,27 @@ private:
 class DistanceJoint:public Joint{
 public:
     DistanceJoint(uint64_t bodyId1,uint64_t bodyId2,float r):bodyId1(bodyId1),bodyId2(bodyId2),r(r){}
-    virtual void ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
+    virtual bool ApplyImpulses(std::vector<RigidBody>& bodies,float dt){
         RigidBody &b1 = bodies[bodyId1],&b2 = bodies[bodyId2];
         Vector3f J = b1.x - b2.x;
         float C = .5 * J.NormSquared() - r*r;
         float K = (b1.inverseMass + b2.inverseMass ) * Dot(J,J);
-        float lambda = (Dot(b1.v - b2.v,J) + BETA*C/dt)/ K;
+        float last_lambda = lambda;
+        lambda = (Dot(b1.v - b2.v,J) + BETA*C/dt)/ K;
         if(K >= TOLLERANCE){
             b1.v +=-b1.inverseMass * lambda * J;
             b2.v += b2.inverseMass * lambda * J;
         }
+        return std::fabs(lambda - last_lambda)/lambda < CONVERGENCE_TRESHOLD;
     }
 private:
+    float lambda;
     const uint64_t bodyId1,bodyId2;
     const float r;
-    static constexpr float BETA = .1;
+    static constexpr float BETA = .01;
     static constexpr float TOLLERANCE = 1e-8;
+    static constexpr float CONVERGENCE_TRESHOLD = 10.0 / 100.0;
 };
-
 
 class BodyRef{
     friend class World;    
