@@ -7,7 +7,7 @@
 #include <algorithm>
 
 class GJKState{
-    public:
+public:
     SupportPoint simplexSupportPoints[4];
     float det(int s,int j,int len = -1) noexcept{
         if(visited[s][j]){
@@ -81,7 +81,7 @@ class GJKState{
         }
         return -1;
     }
-    private:
+private:
     float dp[4][4];
     float memo[16][4];
     bool visited[16][4];
@@ -123,7 +123,7 @@ bool GJK(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const Conve
         while(simplex_bits & (1 << next)) next++;
         Vector3f s1 = c1.Support((-1.0)*v);
         Vector3f s2 = c2.Support(v);
-        SupportPoint& p = state.simplexSupportPoints[next]; 
+        auto& p = state.simplexSupportPoints[next];
         p = SupportPoint(s1,s2);
         if(Dot(p.x,v) >= 0) return false;
         simplex_bits |= 1 << next;

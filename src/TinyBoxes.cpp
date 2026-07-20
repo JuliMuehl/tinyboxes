@@ -55,8 +55,6 @@ void PlaneConstraint::FindViolations(const std::vector<RigidBody>& bodies){
 }
 
 bool PlaneConstraint::ApplyImpulse(RigidBody& body,Contact& contact,float dt){
-    
-    
     Vector3f r = contact.point - body.x;
     auto invI = body.GetTransformedInverseInertia();
     Vector3f J_v_n = normal;
@@ -97,7 +95,6 @@ bool PlaneConstraint::ApplyImpulse(RigidBody& body,Contact& contact,float dt){
         delta_lambda_u1 = contact.lambda_u1 - lambda_u1_prev;
         delta_lambda_u2 = contact.lambda_u2 - lambda_u2_prev; 
     }
-    //std::cout << "delta_lambda_n = " << delta_lambda_n << " delta_lambda_u1 = " << delta_lambda_u1 << " delta_lambda_u2= " << delta_lambda_u2<< std::endl; 
     if((K_n >= TOLLERANCE && K_u1 >= TOLLERANCE && K_u2 >= TOLLERANCE)){
         body.v += body.inverseMass * (delta_lambda_n * J_v_n + delta_lambda_u1*J_v_u1 + delta_lambda_u2*J_v_u2);
         body.omega += invI.Transform(delta_lambda_n * J_omega_n + delta_lambda_u1*J_omega_u1 + delta_lambda_u2*J_omega_u2);
