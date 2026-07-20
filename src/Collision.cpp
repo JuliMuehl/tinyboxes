@@ -6,84 +6,90 @@
 #include <tuple>
 #include <algorithm>
 
-static float dp[4][4];
-static float memo[16][4];
-static bool visited[16][4];
-static SupportPoint y[4];
-
-static float det(int s,int j,int len = -1) noexcept{
-    if(visited[s][j]){
-        return memo[s][j];
-    }
-    if(len == -1){
-        len = 0;
-        for(int i = 1;i <= s;i <<= 1) if(s & i) len++;
-    }
-    if(len == 1){
-        return 1;
-    }
-    int s_ = s & ~(1 << j);
-    int k = -1;
-    float sum = 0;
-    for(int i = 0;i < 4;++i){
-        if(s_ & 1<<i){
-            if(k < 0) k = i;
-            sum += det(s_,i,len-1) * (dp[k][i] - dp[j][i]);
+class GJKState{
+    public:
+    SupportPoint simplexSupportPoints[4];
+    float det(int s,int j,int len = -1) noexcept{
+        if(visited[s][j]){
+            return memo[s][j];
         }
-    }
-    visited[s][j] = true;
-    memo[s][j] = sum;
-    return sum;
-}
-
-static bool valid(int simplex,int s) noexcept{
-    for(int i = 0;i < 4;i++){
-        int bit = 1 << i;
-        if(simplex & bit){
-            if(s & bit){
-                if(det(s,i) <= 0) return false;
-            }else if(det(s|bit,i) > 0) {
-                return false;
+        if(len == -1){
+            len = 0;
+            for(int i = 1;i <= s;i <<= 1) if(s & i) len++;
+        }
+        if(len == 1){
+            return 1;
+        }
+        int s_ = s & ~(1 << j);
+        int k = -1;
+        float sum = 0;
+        for(int i = 0;i < 4;++i){
+            if(s_ & (1<<i)){
+                if(k < 0) k = i;
+                sum += det(s_,i,len-1) * (dp[k][i] - dp[j][i]);
             }
         }
+        visited[s][j] = true;
+        memo[s][j] = sum;
+        return sum;
     }
-    return true;
-}
 
-static void closest_vector(int s,Vector3f& v) noexcept{
-    float sum = 0;
-    v = Vector3f();
-    for(int i =0;i<s;i++){
-        if(s & 1 << i) {
-            v  = v + det(s,i) * y[i].x;
-            sum += det(s,i);
-        }
-    }
-    v = (1/sum) * v;
-}
-
-static int closest_simplex(int simplex,Vector3f& v) noexcept{
-    for(int i =0;i < 4;i++){
-        for(int j = 0;j < 4;j++){
-            dp[i][j] = Dot(y[i].x,y[j].x);
-        }
-    }
-    for(int i =0;i < 16;i++){
-        for(int j = 0;j < 4;j++){
-            visited[i][j] = false;
-        }
-    }
-    for(int s = 1;s<=simplex;s++){
-        if((simplex & s) == s){
-            if(valid(simplex,s)){
-                closest_vector(s,v);
-                return s;
+    bool valid(int simplex,int s) noexcept{
+        for(int i = 0;i < 4;i++){
+            int bit = 1 << i;
+            if(simplex & bit){
+                if(s & bit){
+                    if(det(s,i) <= 0) return false;
+                }else if(det(s|bit,i) > 0) {
+                    return false;
+                }
             }
         }
+        return true;
     }
-    return -1;
-}
 
+    void closest_vector(int s,Vector3f& v) noexcept{
+        float sum = 0;
+        v = Vector3f();
+        for(int i =0;i<s;i++){
+            if(s & (1 << i)) {
+                v  = v + det(s,i) * simplexSupportPoints[i].x;
+                sum += det(s,i);
+            }
+        }
+        v = (1/sum) * v;
+    }
+
+    int closest_simplex(int simplex,Vector3f& v) noexcept{
+        for(int i =0;i < 4;i++){
+            for(int j = 0;j < 4;j++){
+                dp[i][j] = Dot(simplexSupportPoints[i].x,simplexSupportPoints[j].x);
+            }
+        }
+        for(int i =0;i < 16;i++){
+            for(int j = 0;j < 4;j++){
+                visited[i][j] = false;
+            }
+        }
+        for(int s = 1;s<=simplex;s++){
+            if((simplex & s) == s){
+                if(valid(simplex,s)){
+                    closest_vector(s,v);
+                    return s;
+                }
+            }
+        }
+        return -1;
+    }
+    private:
+    float dp[4][4];
+    float memo[16][4];
+    bool visited[16][4];
+};
+
+// This function is used to make sure we always have a full tetrahedron.  
+// GJK may terminate with a closest simplex which is a triangle, line or point but EPA requires a full tetrahedron containing the origin
+// Since a collision implies that the origin is contained in the final simplex we can expand it arbitrarly with any affinely independent point
 static void expand_simplex(std::vector<SupportPoint>& simplex, const ConvexCollider& c1, const ConvexCollider& c2) noexcept {
     if (simplex.size() == 1) {
         auto w = SupportPoint(c1.Support(Vector3f(1, 0, 0)), c2.Support(Vector3f(-1, 0, 0)));
@@ -106,28 +112,30 @@ static void expand_simplex(std::vector<SupportPoint>& simplex, const ConvexColli
     }
 }
 
-bool GJK(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2,Vector3f v) noexcept{
+bool GJK(std::vector<SupportPoint>& simplex,const ConvexCollider& c1,const ConvexCollider& c2, Vector3f v) noexcept{
     constexpr float TOLERANCE = 1e-6;
     constexpr unsigned int MAX_ITERATIONS = 256;
     int simplex_bits = 0;
     unsigned int iteration = 0;
+    GJKState state;
     do{
         int next = 0;
-        while(simplex_bits & 1 << next) next++;
+        while(simplex_bits & (1 << next)) next++;
         Vector3f s1 = c1.Support((-1.0)*v);
         Vector3f s2 = c2.Support(v);
-        y[next] = SupportPoint(s1,s2);
-        if(Dot(y[next].x,v) >= 0) return false;
+        SupportPoint& p = state.simplexSupportPoints[next]; 
+        p = SupportPoint(s1,s2);
+        if(Dot(p.x,v) >= 0) return false;
         simplex_bits |= 1 << next;
-        simplex_bits = closest_simplex(simplex_bits,v);
+        simplex_bits = state.closest_simplex(simplex_bits,v);
         if(simplex_bits < 0) return false;
         if(iteration++ > MAX_ITERATIONS) return false;
     }while(TOLERANCE < v.Norm());
     simplex.clear();
     simplex.reserve(4);
     for (int i = 0; i < 4;i++) {
-        if (simplex_bits & 1 << i) {
-            simplex.push_back(y[i]);
+        if (simplex_bits & (1 << i)) {
+            simplex.push_back(state.simplexSupportPoints[i]);
         }
     }
     expand_simplex(simplex,c1,c2);
