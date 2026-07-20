@@ -84,7 +84,7 @@ static int closest_simplex(int simplex,Vector3f& v) noexcept{
     return -1;
 }
 
-static void expand_simplex(std::vector<SupportPoint>& simplex, const ConvexCollider& c1, const ConvexCollider& c2) {
+static void expand_simplex(std::vector<SupportPoint>& simplex, const ConvexCollider& c1, const ConvexCollider& c2) noexcept {
     if (simplex.size() == 1) {
         auto w = SupportPoint(c1.Support(Vector3f(1, 0, 0)), c2.Support(Vector3f(-1, 0, 0)));
         simplex.push_back(w);
@@ -149,14 +149,13 @@ template<typename T>
 struct ArraySet{
 public:
     using iterator_type = typename std::vector<T>::iterator;
-    ArraySet(std::vector<T> data):arr(data){
-    }
+    ArraySet(std::vector<T> data):arr(data){}
     ArraySet(){}
     void insert(T elem){
         arr.push_back(elem);
     }
     iterator_type erase(iterator_type it){
-        std::swap(*it,arr.back());
+        std::swap(*it, arr.back());
         arr.pop_back();
         return it == std::prev(arr.end()) ? arr.end():it;
     }
@@ -169,6 +168,9 @@ public:
     iterator_type find(const T& elem){
         return std::find(begin(), end(), elem);
     }
+    void clear(){
+        arr.clear();
+    }
 private:
     std::vector<T> arr;
 };
@@ -177,7 +179,7 @@ class ExpandingPolytope {
 public:
     void InsertVertex(SupportPoint point) noexcept{
         vertices.push_back(point);
-        ArraySet<Edge> horizon;
+        horizon.clear();
         for (auto it = faces.begin(); it != faces.end();) {
             const Face& face = *it;
             if (Dot(face.normal,point.x - vertices[std::get<0>(face)].x) >= 0) {
@@ -236,12 +238,13 @@ public:
 
     ExpandingPolytope(const std::vector<SupportPoint>& simplex) : vertices(simplex) {
         assert(simplex.size() == 4);
-        faces = Set({ MakeFace(1,2,0) ,MakeFace(3,2,1) ,MakeFace(0,3,1) ,MakeFace(2,3,0) });
+        faces = ArraySet<Face>({ MakeFace(1,2,0) ,MakeFace(3,2,1) ,MakeFace(0,3,1) ,MakeFace(2,3,0) });
     }
 private:
     std::vector<SupportPoint> vertices;
-    using Set = ArraySet<Face>;
-    Set faces;
+    
+    ArraySet<Face> faces;
+    ArraySet<Edge> horizon;
     inline Vector3f Normal(size_t i, size_t j, size_t k) noexcept{
         Vector3f n = Cross((vertices[j].x - vertices[i].x),(vertices[k].x - vertices[i].x));
         n = (1 / n.Norm()) * n;
